@@ -35,7 +35,9 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_columnWeight="1"
-                android:layout_margin="8dp">
+                android:layout_margin="8dp"
+                android:clickable="true"
+                android:focusable="true">
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -64,7 +66,9 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_columnWeight="1"
-                android:layout_margin="8dp">
+                android:layout_margin="8dp"
+                android:clickable="true"
+                android:focusable="true">
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -83,7 +87,32 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Add more cards for other metrics -->
+            <!-- Accelerometer Card -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/accelerometerCard"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                android:clickable="true"
+                android:focusable="true">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Accelerometer"/>
+                    <TextView
+                        android:id="@+id/accelerometerText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="X: 0.1, Y: 0.2, Z: 9.8"
+                        android:textSize="18sp"/>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
         </GridLayout>
 
