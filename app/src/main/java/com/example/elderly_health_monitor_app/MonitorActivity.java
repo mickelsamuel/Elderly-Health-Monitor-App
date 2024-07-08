@@ -16,9 +16,9 @@ public class MonitorActivity extends AppCompatActivity {
         setContentView(R.layout.activity_monitor);
 
         // Initialize TextViews
-        oxygenReading = findViewById(R.id.oxygenReading);
-        temperatureReading = findViewById(R.id.temperatureReading);
-        accelerometerReading = findViewById(R.id.accelerometerReading);
+        oxygenReading = findViewById(R.id.oxygenText);
+        temperatureReading = findViewById(R.id.temperatureText);
+        accelerometerReading = findViewById( R.id.accelerometerText);
 
         // TODO: Implement real sensor data reading
         updateReadings(98, 36.5f, "X: 0.1, Y: 0.2, Z: 9.8");
