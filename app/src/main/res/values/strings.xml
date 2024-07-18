@@ -1,3 +1,12 @@
 <resources>
-    <string name="app_name">Elderly-Health-Monitor-App</string>
+    <string name="app_name">Elderly Health Monitor App</string>
+    <string-array name="sort_options">
+        <item>Sort by Name</item>
+        <item>Sort by Patient ID</item>
+        <item>Sort by Date of Birth</item>
+        <item>Sort by Oxygen Level</item>
+        <item>Sort by Temperature</item>
+        <item>Sort by Heart Rate</item>
+        <!-- Add more sorting options as needed -->
+    </string-array>
 </resources>
