@@ -26,6 +26,27 @@
         android:hint="Patient ID"
         android:inputType="number" />
 
+    <EditText
+        android:id="@+id/patientGenderInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Gender"
+        android:inputType="text" />
+
+    <EditText
+        android:id="@+id/patientAgeInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Age"
+        android:inputType="number" />
+
+    <EditText
+        android:id="@+id/patientLastVisitDateInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Last Visit Date"
+        android:inputType="date" />
+
     <Button
         android:id="@+id/savePatientButton"
         android:layout_width="match_parent"

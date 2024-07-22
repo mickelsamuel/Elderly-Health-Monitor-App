@@ -12,6 +12,9 @@ public class AddPatientActivity extends AppCompatActivity {
     private EditText patientNameInput;
     private EditText patientDOBInput;
     private EditText patientIDInput;
+    private EditText patientGenderInput;
+    private EditText patientAgeInput;
+    private EditText patientLastVisitDateInput;
     private Button savePatientButton;
     private Button backButton;
 
@@ -23,6 +26,9 @@ public class AddPatientActivity extends AppCompatActivity {
         patientNameInput = findViewById(R.id.patientNameInput);
         patientDOBInput = findViewById(R.id.patientDOBInput);
         patientIDInput = findViewById(R.id.patientIDInput);
+        patientGenderInput = findViewById(R.id.patientGenderInput);
+        patientAgeInput = findViewById(R.id.patientAgeInput);
+        patientLastVisitDateInput = findViewById(R.id.patientLastVisitDateInput);
         savePatientButton = findViewById(R.id.savePatientButton);
         backButton = findViewById(R.id.backButton);
 
@@ -32,11 +38,17 @@ public class AddPatientActivity extends AppCompatActivity {
                 String name = patientNameInput.getText().toString();
                 String dob = patientDOBInput.getText().toString();
                 String patientID = patientIDInput.getText().toString();
+                String gender = patientGenderInput.getText().toString();
+                int age = Integer.parseInt(patientAgeInput.getText().toString());
+                String lastVisitDate = patientLastVisitDateInput.getText().toString();
 
                 Intent resultIntent = new Intent();
                 resultIntent.putExtra("name", name);
                 resultIntent.putExtra("dob", dob);
                 resultIntent.putExtra("patientID", patientID);
+                resultIntent.putExtra("gender", gender);
+                resultIntent.putExtra("age", age);
+                resultIntent.putExtra("lastVisitDate", lastVisitDate);
                 setResult(RESULT_OK, resultIntent);
                 finish();
             }
