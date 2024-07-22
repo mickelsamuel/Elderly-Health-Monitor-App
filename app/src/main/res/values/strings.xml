@@ -4,9 +4,19 @@
         <item>Sort by Name</item>
         <item>Sort by Patient ID</item>
         <item>Sort by Date of Birth</item>
-        <item>Sort by Oxygen Level</item>
         <item>Sort by Temperature</item>
         <item>Sort by Heart Rate</item>
-        <!-- Add more sorting options as needed -->
+        <item>Sort by Gender</item>
+        <item>Sort by Age</item>
+        <item>Sort by Last Visit Date</item>
     </string-array>
+    <string name="user_name_placeholder">Hello, [User Name]</string>
+    <string name="status_summary_placeholder">Your caretaker is [Caretaker Name] ([Caretaker ID])</string>
+    <string name="temperature">Temperature:</string>
+    <string name="heart_rate">Heart Rate:</string>
+    <string name="accelerometer">Accelerometer:</string>
+    <string name="call_for_help">Call for Help</string>
+    <string name="log_out">Log Out</string>
+    <string name="action_settings">Settings</string>
+    <string name="default_notification_channel_id">patient_alerts_channel</string>
 </resources>

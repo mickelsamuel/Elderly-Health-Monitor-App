@@ -4,18 +4,23 @@ public class Patient {
     private String name;
     private String dob;
     private String patientID;
-    private int oxygenLevel;
     private float temperature;
     private int heartRate;
+    private String gender;
+    private int age;
+    private String lastVisitDate;
+    private String accelerometerReading;
 
     public Patient(String name, String dob, String patientID) {
         this.name = name;
         this.dob = dob;
         this.patientID = patientID;
-        // Initialize additional fields as needed
-        this.oxygenLevel = 0;
         this.temperature = 0.0f;
         this.heartRate = 0;
+        this.gender = "";
+        this.age = 0;
+        this.lastVisitDate = "";
+        this.accelerometerReading = "";
     }
 
     public String getName() {
@@ -28,14 +33,6 @@ public class Patient {
 
     public String getPatientID() {
         return patientID;
-    }
-
-    public int getOxygenLevel() {
-        return oxygenLevel;
-    }
-
-    public void setOxygenLevel(int oxygenLevel) {
-        this.oxygenLevel = oxygenLevel;
     }
 
     public float getTemperature() {
@@ -52,5 +49,37 @@ public class Patient {
 
     public void setHeartRate(int heartRate) {
         this.heartRate = heartRate;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public String getLastVisitDate() {
+        return lastVisitDate;
+    }
+
+    public void setLastVisitDate(String lastVisitDate) {
+        this.lastVisitDate = lastVisitDate;
+    }
+
+    public String getAccelerometerReading() {
+        return accelerometerReading;
+    }
+
+    public void setAccelerometerReading(String accelerometerReading) {
+        this.accelerometerReading = accelerometerReading;
     }
 }

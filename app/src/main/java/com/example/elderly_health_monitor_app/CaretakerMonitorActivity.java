@@ -9,6 +9,17 @@ import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.ArrayAdapter;
 import android.widget.AdapterView;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.net.Uri;
+import android.util.Log;
+import android.os.Build;
+
+import androidx.core.app.NotificationCompat;
+
+import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,8 +31,13 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
     private TextView statusSummary;
     private Button addPatientButton;
     private Spinner sortSpinner;
+    private Button toggleSortOrderButton;
 
     private ArrayList<Patient> patients = new ArrayList<>();
+    private boolean isAscending = true; // Default sorting order
+
+    private static final String TAG = "CaretakerMonitorActivity";
+    private static final String CHANNEL_ID = "patient_alerts_channel";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,6 +48,12 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         statusSummary = findViewById(R.id.statusSummary);
         addPatientButton = findViewById(R.id.addPatientButton);
         sortSpinner = findViewById(R.id.sortSpinner);
+        toggleSortOrderButton = findViewById(R.id.toggleSortOrderButton);
+
+        // Example caretaker details
+        String caretakerName = "John Doe"; // Replace with actual name
+        String caretakerId = "C12345"; // Replace with actual ID
+        userNameText.setText("Hello, " + caretakerName + " (" + caretakerId + ")");
 
         // Setup Spinner for sorting
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
@@ -60,61 +82,67 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             }
         });
 
+        // Toggle sorting order
+        toggleSortOrderButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                isAscending = !isAscending;
+                int selectedPosition = sortSpinner.getSelectedItemPosition();
+                sortPatients(selectedPosition);
+            }
+        });
+
+        // Initialize Firebase Messaging
+        FirebaseMessaging.getInstance().subscribeToTopic(caretakerId)
+                .addOnCompleteListener(task -> {
+                    String msg = task.isSuccessful() ? "Subscribed to patient alerts" : "Subscription failed";
+                    Log.d(TAG, msg);
+                });
+
+        // Create notification channel
+        createNotificationChannel();
+
         // TODO: Load existing patients from database or other storage
     }
 
     private void sortPatients(int position) {
+        Comparator<Patient> comparator;
+
         switch (position) {
             case 0: // Sort by name
-                Collections.sort(patients, new Comparator<Patient>() {
-                    @Override
-                    public int compare(Patient p1, Patient p2) {
-                        return p1.getName().compareTo(p2.getName());
-                    }
-                });
+                comparator = Comparator.comparing(Patient::getName);
                 break;
             case 1: // Sort by patient ID
-                Collections.sort(patients, new Comparator<Patient>() {
-                    @Override
-                    public int compare(Patient p1, Patient p2) {
-                        return p1.getPatientID().compareTo(p2.getPatientID());
-                    }
-                });
+                comparator = Comparator.comparing(Patient::getPatientID);
                 break;
             case 2: // Sort by date of birth
-                Collections.sort(patients, new Comparator<Patient>() {
-                    @Override
-                    public int compare(Patient p1, Patient p2) {
-                        return p1.getDob().compareTo(p2.getDob());
-                    }
-                });
-                break;
-            case 3: // Sort by oxygen level
-                Collections.sort(patients, new Comparator<Patient>() {
-                    @Override
-                    public int compare(Patient p1, Patient p2) {
-                        return Integer.compare(p1.getOxygenLevel(), p2.getOxygenLevel());
-                    }
-                });
+                comparator = Comparator.comparing(Patient::getDob);
                 break;
             case 4: // Sort by temperature
-                Collections.sort(patients, new Comparator<Patient>() {
-                    @Override
-                    public int compare(Patient p1, Patient p2) {
-                        return Float.compare(p1.getTemperature(), p2.getTemperature());
-                    }
-                });
+                comparator = Comparator.comparingDouble(Patient::getTemperature);
                 break;
             case 5: // Sort by heart rate
-                Collections.sort(patients, new Comparator<Patient>() {
-                    @Override
-                    public int compare(Patient p1, Patient p2) {
-                        return Integer.compare(p1.getHeartRate(), p2.getHeartRate());
-                    }
-                });
+                comparator = Comparator.comparingInt(Patient::getHeartRate);
                 break;
-            // Add more sorting criteria as needed
+            case 6: // Sort by gender
+                comparator = Comparator.comparing(Patient::getGender);
+                break;
+            case 7: // Sort by age
+                comparator = Comparator.comparingInt(Patient::getAge);
+                break;
+            case 8: // Sort by last visit date
+                comparator = Comparator.comparing(Patient::getLastVisitDate);
+                break;
+            default:
+                comparator = Comparator.comparing(Patient::getName);
         }
+
+        if (!isAscending) {
+            comparator = comparator.reversed();
+        }
+
+        Collections.sort(patients, comparator);
+
         // Update UI with sorted patients
         updatePatientCards();
     }
@@ -131,10 +159,51 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             String name = data.getStringExtra("name");
             String dob = data.getStringExtra("dob");
             String patientID = data.getStringExtra("patientID");
+            String gender = data.getStringExtra("gender");
+            int age = data.getIntExtra("age", 0);
+            String lastVisitDate = data.getStringExtra("lastVisitDate");
 
             Patient newPatient = new Patient(name, dob, patientID);
+            newPatient.setGender(gender);
+            newPatient.setAge(age);
+            newPatient.setLastVisitDate(lastVisitDate);
             patients.add(newPatient);
             updatePatientCards();
         }
+    }
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "Patient Alerts",
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.setDescription("Notifications for patient alerts");
+
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+        }
+    }
+
+    public void handleIncomingNotification(String title, String message) {
+        Intent intent = new Intent(this, CaretakerMonitorActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_MUTABLE);
+
+        Uri defaultSoundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION);
+        NotificationCompat.Builder notificationBuilder =
+                new NotificationCompat.Builder(this, CHANNEL_ID)
+                        .setSmallIcon(R.drawable.ic_notification)
+                        .setContentTitle(title)
+                        .setContentText(message)
+                        .setAutoCancel(true)
+                        .setSound(defaultSoundUri)
+                        .setContentIntent(pendingIntent);
+
+        NotificationManager notificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+        notificationManager.notify(0, notificationBuilder.build());
     }
 }
