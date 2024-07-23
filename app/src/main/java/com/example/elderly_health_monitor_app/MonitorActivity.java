@@ -13,9 +13,12 @@ import android.widget.ImageButton;
 import android.content.SharedPreferences;
 import android.util.TypedValue;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
 
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.RemoteMessage;
+import com.google.firebase.analytics.FirebaseAnalytics;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -32,6 +35,9 @@ public class MonitorActivity extends AppCompatActivity {
     private Button callForHelpButton;
     private Button triggerCriticalAlertButton;  // New button for testing
     private ImageButton settingsButton;
+    private CardView heartRateCard;
+    private CardView temperatureCard;
+    private CardView accelerometerCard;
 
     private static final String TAG = "MonitorActivity";
     private static final AtomicInteger messageId = new AtomicInteger();
@@ -55,6 +61,10 @@ public class MonitorActivity extends AppCompatActivity {
         callForHelpButton = findViewById(R.id.callForHelpButton);
         settingsButton = findViewById(R.id.settingsButton);
         triggerCriticalAlertButton = findViewById(R.id.triggerCriticalAlertButton);  // New button
+
+        heartRateCard = findViewById(R.id.heartRateCard);
+        temperatureCard = findViewById(R.id.temperatureCard);
+        accelerometerCard = findViewById(R.id.accelerometerCard);
 
         // Example patient details
         String patientName = "John Doe"; // Replace with actual patient name
@@ -92,6 +102,21 @@ public class MonitorActivity extends AppCompatActivity {
             public void onClick(View v) {
                 // Manually trigger a critical alert
                 updateReadings(110, 35.0f, "X: 0.0, Y: 0.0, Z: 0.0"); // Adjust values to trigger critical alerts
+            }
+        });
+        // Set OnClickListener for each CardView to navigate to detail screens
+        heartRateCard.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MonitorActivity.this, HeartRateActivity.class);
+                startActivity(intent);
+            }
+        });
+        temperatureCard.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MonitorActivity.this, TemperatureActivity.class);
+                startActivity(intent);
             }
         });
 

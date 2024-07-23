@@ -36,7 +36,12 @@
         <activity
             android:name=".MonitorActivity"
             android:exported="false" />
-
+        <activity
+            android:name=".HeartRateActivity"
+            android:exported="false" />
+        <activity
+            android:name=".TemperatureActivity"
+            android:exported="false" />
         <!-- Firebase Messaging Service -->
         <service
             android:name=".MyFirebaseMessagingService"

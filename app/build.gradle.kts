@@ -34,6 +34,8 @@ dependencies {
     // Firebase platform
     implementation(platform("com.google.firebase:firebase-bom:31.1.0"))
     implementation("com.google.firebase:firebase-messaging")
+    implementation ("com.google.firebase:firebase-database:20.0.4")
+    //implementation ("com.google.firebase:firebase-analytics:21.0.0")
 
     // AndroidX dependencies
     implementation("androidx.appcompat:appcompat:1.4.1")
@@ -46,6 +48,7 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0") {
         exclude(group = "com.android.support", module = "support-compat")
     }
+    implementation(libs.play.services.measurement.api)
 
     // Testing dependencies
     testImplementation("junit:junit:4.13.2")
