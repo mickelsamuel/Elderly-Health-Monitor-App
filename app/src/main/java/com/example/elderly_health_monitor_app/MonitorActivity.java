@@ -1,7 +1,10 @@
 package com.example.elderly_health_monitor_app;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -10,12 +13,12 @@ import android.widget.TextView;
 import android.widget.Button;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.widget.ImageButton;
 import android.content.SharedPreferences;
 import android.util.TypedValue;
 import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.cardview.widget.CardView;
+import androidx.core.app.ActivityCompat;
+import androidx.annotation.NonNull;
 
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -47,22 +50,21 @@ public class MonitorActivity extends AppCompatActivity {
     private Button triggerCriticalAccelerometerButton;
     private Button triggerExtremeAccelerometerButton;
     private ImageButton settingsButton;
-    private CardView heartRateCard;
-    private CardView temperatureCard;
-    private CardView accelerometerCard;
 
     private static final String TAG = "MonitorActivity";
     private static final AtomicInteger messageId = new AtomicInteger();
 
     private FirebaseDatabase firebaseDatabase;
+    private DatabaseReference userRef;
     private DatabaseReference heartRateRef;
     private DatabaseReference temperatureRef;
-    private DatabaseReference userRef;
 
     private Handler handler;
     private Runnable heartRateRunnable;
     private Runnable temperatureRunnable;
     private static final int INTERVAL = 1000; // 1 second
+
+    private String emergencyContactNumber = ""; // Store emergency contact number
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,17 +91,13 @@ public class MonitorActivity extends AppCompatActivity {
         triggerCriticalAccelerometerButton = findViewById(R.id.triggerCriticalAccelerometerButton);
         triggerExtremeAccelerometerButton = findViewById(R.id.triggerExtremeAccelerometerButton);
 
-        heartRateCard = findViewById(R.id.heartRateCard);
-        temperatureCard = findViewById(R.id.temperatureCard);
-        accelerometerCard = findViewById(R.id.accelerometerCard);
-
         // Initialize Firebase Database references
         firebaseDatabase = FirebaseDatabase.getInstance();
+        userRef = firebaseDatabase.getReference("users").child("0"); // Adjust path as needed
         heartRateRef = firebaseDatabase.getReference("heartRateValues");
         temperatureRef = firebaseDatabase.getReference("temperatureValues");
-        userRef = firebaseDatabase.getReference("users/0"); // Adjust this path as needed
 
-        // Fetch and display user details
+        // Fetch user details
         fetchUserDetails();
 
         // Example patient details
@@ -175,22 +173,6 @@ public class MonitorActivity extends AppCompatActivity {
             }
         });
 
-        // Set OnClickListener for each CardView to navigate to detail screens
-        heartRateCard.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MonitorActivity.this, HeartRateActivity.class);
-                startActivity(intent);
-            }
-        });
-        temperatureCard.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MonitorActivity.this, TemperatureActivity.class);
-                startActivity(intent);
-            }
-        });
-
         // Initialize handler and runnables for periodic database updates
         handler = new Handler();
 
@@ -224,6 +206,7 @@ public class MonitorActivity extends AppCompatActivity {
                     String firstName = dataSnapshot.child("firstName").getValue(String.class);
                     String lastName = dataSnapshot.child("lastName").getValue(String.class);
                     String patientId = dataSnapshot.child("id").getValue(String.class);
+                    emergencyContactNumber = dataSnapshot.child("emergencyContact").getValue(String.class); // Fetch emergency contact number
 
                     userNameText.setText("Hello, " + firstName + " " + lastName + " (" + patientId + ")\n");
                 }
@@ -341,6 +324,8 @@ public class MonitorActivity extends AppCompatActivity {
                     public void onClick(DialogInterface dialog, int id) {
                         // Send alert to caretaker
                         sendAlertToCaretaker();
+                        // Initiate phone call to emergency contact
+                        initiatePhoneCall();
                     }
                 })
                 .setNegativeButton("No", new DialogInterface.OnClickListener() {
@@ -365,6 +350,20 @@ public class MonitorActivity extends AppCompatActivity {
         Button negativeButton = dialog.getButton(DialogInterface.BUTTON_NEGATIVE);
         if (negativeButton != null) {
             negativeButton.setTextSize(fontSize);
+        }
+    }
+
+    private void initiatePhoneCall() {
+        if (emergencyContactNumber != null && !emergencyContactNumber.isEmpty()) {
+            Intent callIntent = new Intent(Intent.ACTION_CALL);
+            callIntent.setData(Uri.parse("tel:" + emergencyContactNumber));
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CALL_PHONE}, 1);
+                return;
+            }
+            startActivity(callIntent);
+        } else {
+            Log.e(TAG, "Emergency contact number is not available");
         }
     }
 
