@@ -36,7 +36,12 @@ public class MonitorActivity extends AppCompatActivity {
     private View accelerometerStatus;
     private View heartRateStatus;
     private Button callForHelpButton;
-    private Button triggerCriticalAlertButton;  // New button for testing
+    private Button triggerCriticalHeartRateButton;
+    private Button triggerExtremeHeartRateButton;
+    private Button triggerCriticalTemperatureButton;
+    private Button triggerExtremeTemperatureButton;
+    private Button triggerCriticalAccelerometerButton;
+    private Button triggerExtremeAccelerometerButton;
     private ImageButton settingsButton;
     private CardView heartRateCard;
     private CardView temperatureCard;
@@ -72,7 +77,12 @@ public class MonitorActivity extends AppCompatActivity {
         heartRateStatus = findViewById(R.id.heartRateStatus);
         callForHelpButton = findViewById(R.id.callForHelpButton);
         settingsButton = findViewById(R.id.settingsButton);
-        triggerCriticalAlertButton = findViewById(R.id.triggerCriticalAlertButton);  // New button
+        triggerCriticalHeartRateButton = findViewById(R.id.triggerCriticalHeartRateButton);
+        triggerExtremeHeartRateButton = findViewById(R.id.triggerExtremeHeartRateButton);
+        triggerCriticalTemperatureButton = findViewById(R.id.triggerCriticalTemperatureButton);
+        triggerExtremeTemperatureButton = findViewById(R.id.triggerExtremeTemperatureButton);
+        triggerCriticalAccelerometerButton = findViewById(R.id.triggerCriticalAccelerometerButton);
+        triggerExtremeAccelerometerButton = findViewById(R.id.triggerExtremeAccelerometerButton);
 
         heartRateCard = findViewById(R.id.heartRateCard);
         temperatureCard = findViewById(R.id.temperatureCard);
@@ -113,12 +123,46 @@ public class MonitorActivity extends AppCompatActivity {
             }
         });
 
-        // Set OnClickListener for the Trigger Critical Alert button
-        triggerCriticalAlertButton.setOnClickListener(new View.OnClickListener() {
+        // Set OnClickListeners for the new buttons
+        triggerCriticalHeartRateButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Manually trigger a critical alert
-                updateReadings(110, 35.0f, "X: 0.0, Y: 0.0, Z: 0.0"); // Adjust values to trigger critical alerts
+                updateReadings(40, 36.5f, "X: 0.1, Y: 0.2, Z: 9.8"); // Critical heart rate
+            }
+        });
+
+        triggerExtremeHeartRateButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                updateReadings(55, 36.5f, "X: 0.1, Y: 0.2, Z: 9.8"); // Extreme heart rate
+            }
+        });
+
+        triggerCriticalTemperatureButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                updateReadings(70, 34.0f, "X: 0.1, Y: 0.2, Z: 9.8"); // Critical temperature
+            }
+        });
+
+        triggerExtremeTemperatureButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                updateReadings(70, 35.5f, "X: 0.1, Y: 0.2, Z: 9.8"); // Extreme temperature
+            }
+        });
+
+        triggerCriticalAccelerometerButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                updateReadings(70, 36.5f, "X: 0.0, Y: 0.0, Z: 0.0"); // Critical accelerometer
+            }
+        });
+
+        triggerExtremeAccelerometerButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                updateReadings(70, 36.5f, "X: 0.5, Y: 0.5, Z: 0.5"); // Extreme accelerometer
             }
         });
 
@@ -202,12 +246,29 @@ public class MonitorActivity extends AppCompatActivity {
 
         // Update accelerometer reading
         accelerometerReading.setText(accelerometer);
-        if (accelerometer.equals("X: 0.0, Y: 0.0, Z: 0.0")) { // Example condition for fall
+        String[] values = accelerometer.split(", ");
+        float x = Float.parseFloat(values[0].split(": ")[1]);
+        float y = Float.parseFloat(values[1].split(": ")[1]);
+        float z = Float.parseFloat(values[2].split(": ")[1]);
+
+        if (isFallDetected(x, y, z)) {
             accelerometerStatus.setBackgroundResource(R.drawable.indicator_red);
             showCriticalAlertDialog("Accelerometer");
+        } else if (isExtremeMovement(x, y, z)) {
+            accelerometerStatus.setBackgroundResource(R.drawable.indicator_yellow);
         } else {
             accelerometerStatus.setBackgroundResource(R.drawable.indicator_green);
         }
+    }
+
+    private boolean isFallDetected(float x, float y, float z) {
+        float threshold = 15.0f; // Example threshold for a fall impact
+        return (Math.abs(x) > threshold || Math.abs(y) > threshold || Math.abs(z) > threshold) && (x == 0 && y == 0 && z == 0);
+    }
+
+    private boolean isExtremeMovement(float x, float y, float z) {
+        float threshold = 5.0f; // Example threshold for extreme movement
+        return (Math.abs(x) > threshold || Math.abs(y) > threshold || Math.abs(z) > threshold);
     }
 
     private void showCriticalAlertDialog(String metric) {
