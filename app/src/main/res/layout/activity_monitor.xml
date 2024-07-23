@@ -74,6 +74,25 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+            <Button
+                android:id="@+id/triggerCriticalHeartRateButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Critical Heart Rate"/>
+            <Button
+                android:id="@+id/triggerExtremeHeartRateButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Extreme Heart Rate"/>
+        </LinearLayout>
+
         <!-- Temperature Card -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
@@ -109,6 +128,25 @@
                 </LinearLayout>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+            <Button
+                android:id="@+id/triggerCriticalTemperatureButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Critical Temperature"/>
+            <Button
+                android:id="@+id/triggerExtremeTemperatureButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Extreme Temperature"/>
+        </LinearLayout>
 
         <!-- Accelerometer Card -->
         <androidx.cardview.widget.CardView
@@ -146,19 +184,26 @@
                 </LinearLayout>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
-    </LinearLayout>
 
-    <!-- Trigger Critical Alert Button for Testing -->
-    <Button
-        android:id="@+id/triggerCriticalAlertButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Trigger Critical Alert"
-        app:layout_constraintTop_toBottomOf="@id/sensorLinearLayout"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="16dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+            <Button
+                android:id="@+id/triggerCriticalAccelerometerButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Critical Accelerometer"/>
+            <Button
+                android:id="@+id/triggerExtremeAccelerometerButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Extreme Accelerometer"/>
+        </LinearLayout>
+    </LinearLayout>
 
     <Button
         android:id="@+id/callForHelpButton"
