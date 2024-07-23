@@ -1,5 +1,6 @@
 package com.example.elderly_health_monitor_app;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.os.Handler;
@@ -16,8 +17,11 @@ import android.util.TypedValue;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.cardview.widget.CardView;
 
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.RemoteMessage;
 
@@ -53,6 +57,7 @@ public class MonitorActivity extends AppCompatActivity {
     private FirebaseDatabase firebaseDatabase;
     private DatabaseReference heartRateRef;
     private DatabaseReference temperatureRef;
+    private DatabaseReference userRef;
 
     private Handler handler;
     private Runnable heartRateRunnable;
@@ -92,6 +97,10 @@ public class MonitorActivity extends AppCompatActivity {
         firebaseDatabase = FirebaseDatabase.getInstance();
         heartRateRef = firebaseDatabase.getReference("heartRateValues");
         temperatureRef = firebaseDatabase.getReference("temperatureValues");
+        userRef = firebaseDatabase.getReference("users/0"); // Adjust this path as needed
+
+        // Fetch and display user details
+        fetchUserDetails();
 
         // Example patient details
         String patientName = "John Doe"; // Replace with actual patient name
@@ -205,6 +214,26 @@ public class MonitorActivity extends AppCompatActivity {
         handler.post(temperatureRunnable);
 
         Log.d(TAG, "onCreate: Views initialized");
+    }
+
+    private void fetchUserDetails() {
+        userRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    String firstName = dataSnapshot.child("firstName").getValue(String.class);
+                    String lastName = dataSnapshot.child("lastName").getValue(String.class);
+                    String patientId = dataSnapshot.child("id").getValue(String.class);
+
+                    userNameText.setText("Hello, " + firstName + " " + lastName + " (" + patientId + ")\n");
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                Log.e(TAG, "Failed to fetch user details", databaseError.toException());
+            }
+        });
     }
 
     @Override
