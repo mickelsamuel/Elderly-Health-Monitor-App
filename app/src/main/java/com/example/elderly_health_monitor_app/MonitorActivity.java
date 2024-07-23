@@ -2,9 +2,10 @@ package com.example.elderly_health_monitor_app;
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
-import android.widget.TextView;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Button;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
@@ -13,13 +14,15 @@ import android.widget.ImageButton;
 import android.content.SharedPreferences;
 import android.util.TypedValue;
 import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.RemoteMessage;
-import com.google.firebase.analytics.FirebaseAnalytics;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MonitorActivity extends AppCompatActivity {
@@ -41,6 +44,15 @@ public class MonitorActivity extends AppCompatActivity {
 
     private static final String TAG = "MonitorActivity";
     private static final AtomicInteger messageId = new AtomicInteger();
+
+    private FirebaseDatabase firebaseDatabase;
+    private DatabaseReference heartRateRef;
+    private DatabaseReference temperatureRef;
+
+    private Handler handler;
+    private Runnable heartRateRunnable;
+    private Runnable temperatureRunnable;
+    private static final int INTERVAL = 1000; // 1 second
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,6 +77,11 @@ public class MonitorActivity extends AppCompatActivity {
         heartRateCard = findViewById(R.id.heartRateCard);
         temperatureCard = findViewById(R.id.temperatureCard);
         accelerometerCard = findViewById(R.id.accelerometerCard);
+
+        // Initialize Firebase Database references
+        firebaseDatabase = FirebaseDatabase.getInstance();
+        heartRateRef = firebaseDatabase.getReference("heartRateValues");
+        temperatureRef = firebaseDatabase.getReference("temperatureValues");
 
         // Example patient details
         String patientName = "John Doe"; // Replace with actual patient name
@@ -104,6 +121,7 @@ public class MonitorActivity extends AppCompatActivity {
                 updateReadings(110, 35.0f, "X: 0.0, Y: 0.0, Z: 0.0"); // Adjust values to trigger critical alerts
             }
         });
+
         // Set OnClickListener for each CardView to navigate to detail screens
         heartRateCard.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -120,6 +138,28 @@ public class MonitorActivity extends AppCompatActivity {
             }
         });
 
+        // Initialize handler and runnables for periodic database updates
+        handler = new Handler();
+
+        heartRateRunnable = new Runnable() {
+            @Override
+            public void run() {
+                saveHeartRateToDatabase();
+                handler.postDelayed(this, INTERVAL);
+            }
+        };
+
+        temperatureRunnable = new Runnable() {
+            @Override
+            public void run() {
+                saveTemperatureToDatabase();
+                handler.postDelayed(this, INTERVAL);
+            }
+        };
+
+        handler.post(heartRateRunnable);
+        handler.post(temperatureRunnable);
+
         Log.d(TAG, "onCreate: Views initialized");
     }
 
@@ -128,6 +168,13 @@ public class MonitorActivity extends AppCompatActivity {
         super.onResume();
         float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
         updateFontSize(fontSize);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        handler.removeCallbacks(heartRateRunnable); // Stop updates when activity is paused
+        handler.removeCallbacks(temperatureRunnable); // Stop updates when activity is paused
     }
 
     private void updateReadings(int heartRate, float temperature, String accelerometer) {
@@ -265,5 +312,35 @@ public class MonitorActivity extends AppCompatActivity {
         params.width = sizeInDp;
         params.height = sizeInDp;
         settingsButton.setLayoutParams(params);
+    }
+
+    private void saveHeartRateToDatabase() {
+        String userId = "100"; // Replace with actual user ID
+        long timestamp = System.currentTimeMillis();
+        String heartRateValue = heartRateReading.getText().toString();
+
+        Map<String, Object> heartRateData = new HashMap<>();
+        heartRateData.put("id", userId);
+        heartRateData.put("heartVal", Integer.parseInt(heartRateValue.replace(" bpm", "").trim()));
+        heartRateData.put("heartTime", timestamp);
+
+        heartRateRef.push().setValue(heartRateData)
+                .addOnSuccessListener(aVoid -> Log.d(TAG, "Heart rate data saved successfully"))
+                .addOnFailureListener(e -> Log.e(TAG, "Failed to save heart rate data", e));
+    }
+
+    private void saveTemperatureToDatabase() {
+        String userId = "100"; // Replace with actual user ID
+        long timestamp = System.currentTimeMillis();
+        String temperatureValue = temperatureReading.getText().toString();
+
+        Map<String, Object> temperatureData = new HashMap<>();
+        temperatureData.put("id", userId);
+        temperatureData.put("temperatureVal", Float.parseFloat(temperatureValue.replace("°C", "").trim()));
+        temperatureData.put("temperatureTime", timestamp);
+
+        temperatureRef.push().setValue(temperatureData)
+                .addOnSuccessListener(aVoid -> Log.d(TAG, "Temperature data saved successfully"))
+                .addOnFailureListener(e -> Log.e(TAG, "Failed to save temperature data", e));
     }
 }
