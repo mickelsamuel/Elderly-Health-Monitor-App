@@ -1,8 +1,8 @@
 package com.example.elderly_health_monitor_app;
 
-import androidx.appcompat.app.AppCompatActivity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Button;
@@ -14,9 +14,9 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.net.Uri;
-import android.util.Log;
 import android.os.Build;
 
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -50,10 +50,14 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         sortSpinner = findViewById(R.id.sortSpinner);
         toggleSortOrderButton = findViewById(R.id.toggleSortOrderButton);
 
-        // Example caretaker details
-        String caretakerName = "John Doe"; // Replace with actual name
-        String caretakerId = "C12345"; // Replace with actual ID
-        userNameText.setText("Hello, " + caretakerName + " (" + caretakerId + ")");
+        // Retrieve caretaker details from intent
+        Intent intent = getIntent();
+        String caretakerName = intent.getStringExtra("caretakerName");
+        String caretakerLicense = intent.getStringExtra("caretakerLicense");
+
+        Log.d(TAG, "Caretaker details - Name: " + caretakerName + ", License: " + caretakerLicense);
+
+        userNameText.setText("Hello, " + caretakerName + " (" + caretakerLicense + ")");
 
         // Setup Spinner for sorting
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
@@ -93,7 +97,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         });
 
         // Initialize Firebase Messaging
-        FirebaseMessaging.getInstance().subscribeToTopic(caretakerId)
+        FirebaseMessaging.getInstance().subscribeToTopic(caretakerLicense)
                 .addOnCompleteListener(task -> {
                     String msg = task.isSuccessful() ? "Subscribed to patient alerts" : "Subscription failed";
                     Log.d(TAG, msg);

@@ -9,8 +9,9 @@ import com.google.firebase.FirebaseApp;
 
 public class MainActivity extends AppCompatActivity {
 
-    private Button monitorButton;
-    private Button caretakerButton;
+    private Button loginButton;
+    private Button createUserButton;
+    private Button createCaretakerButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -18,22 +19,31 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         FirebaseApp.initializeApp(this);
 
-        monitorButton = findViewById(R.id.monitorButton);
-        caretakerButton = findViewById(R.id.caretakerButton);
+        loginButton = findViewById(R.id.loginButton);
+        createUserButton = findViewById(R.id.createUserButton);
+        createCaretakerButton = findViewById(R.id.createCaretakerButton);
 
-        monitorButton.setOnClickListener(new View.OnClickListener() {
+        loginButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent monitorIntent = new Intent(MainActivity.this, MonitorActivity.class);
-                startActivity(monitorIntent);
+                Intent loginIntent = new Intent(MainActivity.this, LoginActivity.class);
+                startActivity(loginIntent);
             }
         });
 
-        caretakerButton.setOnClickListener(new View.OnClickListener() {
+        createUserButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent caretakerIntent = new Intent(MainActivity.this, CaretakerMonitorActivity.class);
-                startActivity(caretakerIntent);
+                Intent createUserIntent = new Intent(MainActivity.this, CreateUserActivity.class);
+                startActivity(createUserIntent);
+            }
+        });
+
+        createCaretakerButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent createCaretakerIntent = new Intent(MainActivity.this, CreateCaretakerActivity.class);
+                startActivity(createCaretakerIntent);
             }
         });
     }

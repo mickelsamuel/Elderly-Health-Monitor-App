@@ -24,6 +24,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".LoginActivity" />
+        <activity android:name=".CreateUserActivity" />
+        <activity android:name=".CreateCaretakerActivity" />
         <activity
             android:name=".AddPatientActivity"
             android:exported="false" />

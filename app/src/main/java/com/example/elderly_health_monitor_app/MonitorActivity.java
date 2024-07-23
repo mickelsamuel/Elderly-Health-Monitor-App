@@ -2,7 +2,6 @@ package com.example.elderly_health_monitor_app;
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
@@ -16,13 +15,9 @@ import android.util.TypedValue;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.cardview.widget.CardView;
 
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.RemoteMessage;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MonitorActivity extends AppCompatActivity {
@@ -36,12 +31,7 @@ public class MonitorActivity extends AppCompatActivity {
     private View accelerometerStatus;
     private View heartRateStatus;
     private Button callForHelpButton;
-    private Button triggerCriticalHeartRateButton;
-    private Button triggerExtremeHeartRateButton;
-    private Button triggerCriticalTemperatureButton;
-    private Button triggerExtremeTemperatureButton;
-    private Button triggerCriticalAccelerometerButton;
-    private Button triggerExtremeAccelerometerButton;
+    private Button triggerCriticalAlertButton;  // New button for testing
     private ImageButton settingsButton;
     private CardView heartRateCard;
     private CardView temperatureCard;
@@ -49,15 +39,6 @@ public class MonitorActivity extends AppCompatActivity {
 
     private static final String TAG = "MonitorActivity";
     private static final AtomicInteger messageId = new AtomicInteger();
-
-    private FirebaseDatabase firebaseDatabase;
-    private DatabaseReference heartRateRef;
-    private DatabaseReference temperatureRef;
-
-    private Handler handler;
-    private Runnable heartRateRunnable;
-    private Runnable temperatureRunnable;
-    private static final int INTERVAL = 1000; // 1 second
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,26 +58,17 @@ public class MonitorActivity extends AppCompatActivity {
         heartRateStatus = findViewById(R.id.heartRateStatus);
         callForHelpButton = findViewById(R.id.callForHelpButton);
         settingsButton = findViewById(R.id.settingsButton);
-        triggerCriticalHeartRateButton = findViewById(R.id.triggerCriticalHeartRateButton);
-        triggerExtremeHeartRateButton = findViewById(R.id.triggerExtremeHeartRateButton);
-        triggerCriticalTemperatureButton = findViewById(R.id.triggerCriticalTemperatureButton);
-        triggerExtremeTemperatureButton = findViewById(R.id.triggerExtremeTemperatureButton);
-        triggerCriticalAccelerometerButton = findViewById(R.id.triggerCriticalAccelerometerButton);
-        triggerExtremeAccelerometerButton = findViewById(R.id.triggerExtremeAccelerometerButton);
+        triggerCriticalAlertButton = findViewById(R.id.triggerCriticalAlertButton);  // New button
 
         heartRateCard = findViewById(R.id.heartRateCard);
         temperatureCard = findViewById(R.id.temperatureCard);
         accelerometerCard = findViewById(R.id.accelerometerCard);
 
-        // Initialize Firebase Database references
-        firebaseDatabase = FirebaseDatabase.getInstance();
-        heartRateRef = firebaseDatabase.getReference("heartRateValues");
-        temperatureRef = firebaseDatabase.getReference("temperatureValues");
+        // Retrieve user details from intent
+        Intent intent = getIntent();
+        String userName = intent.getStringExtra("userName");
 
-        // Example patient details
-        String patientName = "John Doe"; // Replace with actual patient name
-        String patientId = "P12345"; // Replace with actual patient ID
-        userNameText.setText("Hello, " + patientName + " (" + patientId + ")\n");
+        userNameText.setText("Hello, " + userName);
 
         // Example caretaker details
         String caretakerName = "Jane Smith"; // Replace with actual caretaker name
@@ -123,46 +95,12 @@ public class MonitorActivity extends AppCompatActivity {
             }
         });
 
-        // Set OnClickListeners for the new buttons
-        triggerCriticalHeartRateButton.setOnClickListener(new View.OnClickListener() {
+        // Set OnClickListener for the Trigger Critical Alert button
+        triggerCriticalAlertButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                updateReadings(40, 36.5f, "X: 0.1, Y: 0.2, Z: 9.8"); // Critical heart rate
-            }
-        });
-
-        triggerExtremeHeartRateButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                updateReadings(55, 36.5f, "X: 0.1, Y: 0.2, Z: 9.8"); // Extreme heart rate
-            }
-        });
-
-        triggerCriticalTemperatureButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                updateReadings(70, 34.0f, "X: 0.1, Y: 0.2, Z: 9.8"); // Critical temperature
-            }
-        });
-
-        triggerExtremeTemperatureButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                updateReadings(70, 35.5f, "X: 0.1, Y: 0.2, Z: 9.8"); // Extreme temperature
-            }
-        });
-
-        triggerCriticalAccelerometerButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                updateReadings(70, 36.5f, "X: 0.0, Y: 0.0, Z: 0.0"); // Critical accelerometer
-            }
-        });
-
-        triggerExtremeAccelerometerButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                updateReadings(70, 36.5f, "X: 0.5, Y: 0.5, Z: 0.5"); // Extreme accelerometer
+                // Manually trigger a critical alert
+                updateReadings(110, 35.0f, "X: 0.0, Y: 0.0, Z: 0.0"); // Adjust values to trigger critical alerts
             }
         });
 
@@ -182,28 +120,6 @@ public class MonitorActivity extends AppCompatActivity {
             }
         });
 
-        // Initialize handler and runnables for periodic database updates
-        handler = new Handler();
-
-        heartRateRunnable = new Runnable() {
-            @Override
-            public void run() {
-                saveHeartRateToDatabase();
-                handler.postDelayed(this, INTERVAL);
-            }
-        };
-
-        temperatureRunnable = new Runnable() {
-            @Override
-            public void run() {
-                saveTemperatureToDatabase();
-                handler.postDelayed(this, INTERVAL);
-            }
-        };
-
-        handler.post(heartRateRunnable);
-        handler.post(temperatureRunnable);
-
         Log.d(TAG, "onCreate: Views initialized");
     }
 
@@ -212,13 +128,6 @@ public class MonitorActivity extends AppCompatActivity {
         super.onResume();
         float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
         updateFontSize(fontSize);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        handler.removeCallbacks(heartRateRunnable); // Stop updates when activity is paused
-        handler.removeCallbacks(temperatureRunnable); // Stop updates when activity is paused
     }
 
     private void updateReadings(int heartRate, float temperature, String accelerometer) {
@@ -246,29 +155,12 @@ public class MonitorActivity extends AppCompatActivity {
 
         // Update accelerometer reading
         accelerometerReading.setText(accelerometer);
-        String[] values = accelerometer.split(", ");
-        float x = Float.parseFloat(values[0].split(": ")[1]);
-        float y = Float.parseFloat(values[1].split(": ")[1]);
-        float z = Float.parseFloat(values[2].split(": ")[1]);
-
-        if (isFallDetected(x, y, z)) {
+        if (accelerometer.equals("X: 0.0, Y: 0.0, Z: 0.0")) { // Example condition for fall
             accelerometerStatus.setBackgroundResource(R.drawable.indicator_red);
             showCriticalAlertDialog("Accelerometer");
-        } else if (isExtremeMovement(x, y, z)) {
-            accelerometerStatus.setBackgroundResource(R.drawable.indicator_yellow);
         } else {
             accelerometerStatus.setBackgroundResource(R.drawable.indicator_green);
         }
-    }
-
-    private boolean isFallDetected(float x, float y, float z) {
-        float threshold = 15.0f; // Example threshold for a fall impact
-        return (Math.abs(x) > threshold || Math.abs(y) > threshold || Math.abs(z) > threshold) && (x == 0 && y == 0 && z == 0);
-    }
-
-    private boolean isExtremeMovement(float x, float y, float z) {
-        float threshold = 5.0f; // Example threshold for extreme movement
-        return (Math.abs(x) > threshold || Math.abs(y) > threshold || Math.abs(z) > threshold);
     }
 
     private void showCriticalAlertDialog(String metric) {
@@ -373,35 +265,5 @@ public class MonitorActivity extends AppCompatActivity {
         params.width = sizeInDp;
         params.height = sizeInDp;
         settingsButton.setLayoutParams(params);
-    }
-
-    private void saveHeartRateToDatabase() {
-        String userId = "100"; // Replace with actual user ID
-        long timestamp = System.currentTimeMillis();
-        String heartRateValue = heartRateReading.getText().toString();
-
-        Map<String, Object> heartRateData = new HashMap<>();
-        heartRateData.put("id", userId);
-        heartRateData.put("heartVal", Integer.parseInt(heartRateValue.replace(" bpm", "").trim()));
-        heartRateData.put("heartTime", timestamp);
-
-        heartRateRef.push().setValue(heartRateData)
-                .addOnSuccessListener(aVoid -> Log.d(TAG, "Heart rate data saved successfully"))
-                .addOnFailureListener(e -> Log.e(TAG, "Failed to save heart rate data", e));
-    }
-
-    private void saveTemperatureToDatabase() {
-        String userId = "100"; // Replace with actual user ID
-        long timestamp = System.currentTimeMillis();
-        String temperatureValue = temperatureReading.getText().toString();
-
-        Map<String, Object> temperatureData = new HashMap<>();
-        temperatureData.put("id", userId);
-        temperatureData.put("temperatureVal", Float.parseFloat(temperatureValue.replace("°C", "").trim()));
-        temperatureData.put("temperatureTime", timestamp);
-
-        temperatureRef.push().setValue(temperatureData)
-                .addOnSuccessListener(aVoid -> Log.d(TAG, "Temperature data saved successfully"))
-                .addOnFailureListener(e -> Log.e(TAG, "Failed to save temperature data", e));
     }
 }
