@@ -4,37 +4,61 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".LoginActivity">
+    tools:context=".LoginActivity"
+    android:padding="16dp">
 
-    <EditText
-        android:id="@+id/editTextPhoneNumber"
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/textInputLayoutPhoneNumber"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:hint="Phone Number"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp" />
+        android:layout_marginTop="32dp">
 
-    <EditText
-        android:id="@+id/editTextPassword"
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editTextPhoneNumber"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="phone" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/textInputLayoutPassword"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:hint="Password"
-        android:inputType="textPassword"
-        app:layout_constraintTop_toBottomOf="@id/editTextPhoneNumber"
+        app:layout_constraintTop_toBottomOf="@id/textInputLayoutPhoneNumber"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp" />
+        android:layout_marginTop="16dp">
 
-    <Button
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editTextPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textPassword" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/buttonLogin"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Login"
-        app:layout_constraintTop_toBottomOf="@id/editTextPassword"
+        app:layout_constraintTop_toBottomOf="@id/textInputLayoutPassword"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp"
+        android:layout_marginTop="16dp"
         android:onClick="onLoginClick" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/buttonCreateAccount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Create Account"
+        app:layout_constraintTop_toBottomOf="@id/buttonLogin"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp" />
 </androidx.constraintlayout.widget.ConstraintLayout>
