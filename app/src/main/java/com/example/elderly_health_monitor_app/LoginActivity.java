@@ -15,12 +15,14 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 public class LoginActivity extends AppCompatActivity {
     private static final String TAG = "LoginActivity";
 
-    private EditText editTextPhoneNumber;
-    private EditText editTextPassword;
+    private TextInputEditText editTextPhoneNumber;
+    private TextInputEditText editTextPassword;
 
     private FirebaseDatabase firebaseDatabase;
     private DatabaseReference usersRef;
@@ -35,6 +37,15 @@ public class LoginActivity extends AppCompatActivity {
 
         firebaseDatabase = FirebaseDatabase.getInstance();
         usersRef = firebaseDatabase.getReference("users");
+
+        // Add listener to "Create Account" button
+        findViewById(R.id.buttonCreateAccount).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(LoginActivity.this, AccountCreationActivity.class);
+                startActivity(intent);
+            }
+        });
     }
 
     public void onLoginClick(View view) {
