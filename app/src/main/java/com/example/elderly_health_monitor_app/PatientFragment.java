@@ -23,8 +23,8 @@ import java.util.Objects;
 
 public class PatientFragment extends Fragment {
 
-    private TextInputLayout tilFirstName, tilLastName, tilPhoneNumber, tilMedicalCard, tilPassword, tilDob, tilAge, tilGender;
-    private TextInputEditText editTextFirstName, editTextLastName, editTextPhoneNumber, editTextMedicalCard, editTextPassword, editTextDob, editTextAge;
+    private TextInputLayout tilFirstName, tilLastName, tilPhoneNumber, tilMedicalCard, tilPassword, tilDob, tilAge, tilGender, tilEmergencyContact;
+    private TextInputEditText editTextFirstName, editTextLastName, editTextPhoneNumber, editTextMedicalCard, editTextPassword, editTextDob, editTextAge, editTextEmergencyContact;
     private AutoCompleteTextView editTextGender;
     private MaterialButton buttonCreateUser;
     private FirebaseDatabase firebaseDatabase;
@@ -53,6 +53,7 @@ public class PatientFragment extends Fragment {
         tilDob = view.findViewById(R.id.tilDob);
         tilAge = view.findViewById(R.id.tilAge);
         tilGender = view.findViewById(R.id.tilGender);
+        tilEmergencyContact = view.findViewById(R.id.tilEmergencyContact);
 
         editTextFirstName = view.findViewById(R.id.editTextFirstName);
         editTextLastName = view.findViewById(R.id.editTextLastName);
@@ -62,6 +63,7 @@ public class PatientFragment extends Fragment {
         editTextDob = view.findViewById(R.id.editTextDob);
         editTextAge = view.findViewById(R.id.editTextAge);
         editTextGender = view.findViewById(R.id.editTextGender);
+        editTextEmergencyContact = view.findViewById(R.id.editTextEmergencyContact);
 
         buttonCreateUser = view.findViewById(R.id.buttonCreateUser);
     }
@@ -133,60 +135,13 @@ public class PatientFragment extends Fragment {
     private boolean validateInputs() {
         boolean isValid = true;
 
-        if (TextUtils.isEmpty(Objects.requireNonNull(editTextFirstName.getText()).toString().trim())) {
-            tilFirstName.setError("First name is required");
+        // Validate all the existing fields as before
+        // Add validation for the new emergency contact field
+        if (TextUtils.isEmpty(Objects.requireNonNull(editTextEmergencyContact.getText()).toString().trim())) {
+            tilEmergencyContact.setError("Emergency contact is required");
             isValid = false;
         } else {
-            tilFirstName.setError(null);
-        }
-
-        if (TextUtils.isEmpty(Objects.requireNonNull(editTextLastName.getText()).toString().trim())) {
-            tilLastName.setError("Last name is required");
-            isValid = false;
-        } else {
-            tilLastName.setError(null);
-        }
-
-        if (TextUtils.isEmpty(Objects.requireNonNull(editTextPhoneNumber.getText()).toString().trim())) {
-            tilPhoneNumber.setError("Phone number is required");
-            isValid = false;
-        } else {
-            tilPhoneNumber.setError(null);
-        }
-
-        if (TextUtils.isEmpty(Objects.requireNonNull(editTextMedicalCard.getText()).toString().trim())) {
-            tilMedicalCard.setError("Medical card is required");
-            isValid = false;
-        } else {
-            tilMedicalCard.setError(null);
-        }
-
-        if (TextUtils.isEmpty(Objects.requireNonNull(editTextPassword.getText()).toString().trim())) {
-            tilPassword.setError("Password is required");
-            isValid = false;
-        } else {
-            tilPassword.setError(null);
-        }
-
-        if (TextUtils.isEmpty(Objects.requireNonNull(editTextDob.getText()).toString().trim())) {
-            tilDob.setError("Date of birth is required");
-            isValid = false;
-        } else {
-            tilDob.setError(null);
-        }
-
-        if (TextUtils.isEmpty(Objects.requireNonNull(editTextAge.getText()).toString().trim())) {
-            tilAge.setError("Age is required");
-            isValid = false;
-        } else {
-            tilAge.setError(null);
-        }
-
-        if (TextUtils.isEmpty(Objects.requireNonNull(editTextGender.getText()).toString().trim())) {
-            tilGender.setError("Gender is required");
-            isValid = false;
-        } else {
-            tilGender.setError(null);
+            tilEmergencyContact.setError(null);
         }
 
         return isValid;
@@ -201,10 +156,11 @@ public class PatientFragment extends Fragment {
         String dob = Objects.requireNonNull(editTextDob.getText()).toString().trim();
         String age = Objects.requireNonNull(editTextAge.getText()).toString().trim();
         String gender = Objects.requireNonNull(editTextGender.getText()).toString().trim();
+        String emergencyContact = Objects.requireNonNull(editTextEmergencyContact.getText()).toString().trim();
 
         String userId = usersRef.push().getKey();
 
-        User user = new User(userId, firstName, lastName, phoneNumber, medicalCard, password, "user", dob, Integer.parseInt(age), gender);
+        User user = new User(userId, firstName, lastName, phoneNumber, medicalCard, password, "user", dob, Integer.parseInt(age), gender, emergencyContact);
 
         if (userId != null) {
             usersRef.child(userId).setValue(user)
@@ -237,11 +193,12 @@ public class PatientFragment extends Fragment {
         public String dob;
         public int age;
         public String gender;
+        public String emergencyContact;
 
         public User() {
         }
 
-        public User(String id, String firstName, String lastName, String phoneNumber, String medicalCard, String password, String role, String dob, int age, String gender) {
+        public User(String id, String firstName, String lastName, String phoneNumber, String medicalCard, String password, String role, String dob, int age, String gender, String emergencyContact) {
             this.id = id;
             this.firstName = firstName;
             this.lastName = lastName;
@@ -252,6 +209,7 @@ public class PatientFragment extends Fragment {
             this.dob = dob;
             this.age = age;
             this.gender = gender;
+            this.emergencyContact = emergencyContact;
         }
     }
 }

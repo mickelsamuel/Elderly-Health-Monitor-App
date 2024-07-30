@@ -18,7 +18,7 @@ android {
     }
 
     buildTypes {
-        release {
+        getByName("release") {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
@@ -34,8 +34,11 @@ dependencies {
     // Firebase platform
     implementation(platform("com.google.firebase:firebase-bom:31.1.0"))
     implementation("com.google.firebase:firebase-messaging")
-    implementation ("com.google.firebase:firebase-database:20.0.4")
-    //implementation ("com.google.firebase:firebase-analytics:21.0.0")
+    implementation("com.google.firebase:firebase-database")
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-appcheck")
+    implementation("com.google.firebase:firebase-appcheck-playintegrity")
+    //implementation("com.google.firebase:firebase-analytics:21.0.0")
 
     // AndroidX dependencies
     implementation("androidx.appcompat:appcompat:1.4.1")
@@ -48,7 +51,6 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0") {
         exclude(group = "com.android.support", module = "support-compat")
     }
-    implementation(libs.play.services.measurement.api)
 
     // Testing dependencies
     testImplementation("junit:junit:4.13.2")
@@ -58,10 +60,12 @@ dependencies {
 
 // Ensure proper task dependencies
 afterEvaluate {
-    val processDebugGoogleServices by tasks.named("processDebugGoogleServices")
-    val mergeDebugResources by tasks.named("mergeDebugResources")
-
-    mergeDebugResources.dependsOn(processDebugGoogleServices)
+    tasks.named("mapDebugSourceSetPaths") {
+        dependsOn(tasks.named("processDebugGoogleServices"))
+    }
+    tasks.named("mergeDebugResources") {
+        dependsOn(tasks.named("processDebugGoogleServices"))
+    }
 }
 
 // Perform a clean build to ensure changes take effect

@@ -7,29 +7,47 @@
     tools:context=".LoginActivity"
     android:padding="16dp">
 
+    <!-- TextInputLayout for First Name -->
     <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/textInputLayoutPhoneNumber"
+        android:id="@+id/textInputLayoutFirstName"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:hint="Phone Number"
+        android:hint="First Name"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="32dp">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/editTextPhoneNumber"
+            android:id="@+id/editTextFirstName"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="phone" />
+            android:layout_height="wrap_content" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- TextInputLayout for Last Name -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/textInputLayoutLastName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="Last Name"
+        app:layout_constraintTop_toBottomOf="@id/textInputLayoutFirstName"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editTextLastName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Password Entry remains unchanged -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/textInputLayoutPassword"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:hint="Password"
-        app:layout_constraintTop_toBottomOf="@id/textInputLayoutPhoneNumber"
+        app:layout_constraintTop_toBottomOf="@id/textInputLayoutLastName"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="16dp">
@@ -41,6 +59,7 @@
             android:inputType="textPassword" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- Buttons remain unchanged -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/buttonLogin"
         android:layout_width="wrap_content"
