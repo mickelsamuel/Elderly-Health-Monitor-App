@@ -11,15 +11,23 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.widget.ImageButton;
-import android.content.SharedPreferences;
+import android.widget.Toast;
 import android.util.TypedValue;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.cardview.widget.CardView;
+import android.content.pm.PackageManager;
+import android.Manifest;
+import android.net.Uri;
+import androidx.core.app.ActivityCompat;
+import android.content.IntentFilter;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.firebase.messaging.RemoteMessage;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,37 +35,23 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class MonitorActivity extends AppCompatActivity {
 
-    private TextView temperatureReading;
-    private TextView accelerometerReading;
-    private TextView heartRateReading;
-    private TextView userNameText;
-    private TextView statusSummary;
-    private View temperatureStatus;
-    private View accelerometerStatus;
-    private View heartRateStatus;
+    private TextView temperatureReading, accelerometerReading, heartRateReading, userNameText, statusSummary;
+    private View temperatureStatus, accelerometerStatus, heartRateStatus;
     private Button callForHelpButton;
-    private Button triggerCriticalHeartRateButton;
-    private Button triggerExtremeHeartRateButton;
-    private Button triggerCriticalTemperatureButton;
-    private Button triggerExtremeTemperatureButton;
-    private Button triggerCriticalAccelerometerButton;
-    private Button triggerExtremeAccelerometerButton;
     private ImageButton settingsButton;
-    private CardView heartRateCard;
-    private CardView temperatureCard;
-    private CardView accelerometerCard;
+    private CardView heartRateCard, temperatureCard, accelerometerCard;
 
     private static final String TAG = "MonitorActivity";
     private static final AtomicInteger messageId = new AtomicInteger();
 
     private FirebaseDatabase firebaseDatabase;
-    private DatabaseReference heartRateRef;
-    private DatabaseReference temperatureRef;
+    private DatabaseReference heartRateRef, temperatureRef, userRef;
 
     private Handler handler;
-    private Runnable heartRateRunnable;
-    private Runnable temperatureRunnable;
+    private Runnable heartRateRunnable, temperatureRunnable;
     private static final int INTERVAL = 1000; // 1 second
+
+    private String userId; // Define userId here
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,7 +60,6 @@ public class MonitorActivity extends AppCompatActivity {
 
         Log.d(TAG, "onCreate: Initializing views");
 
-        // Initialize TextViews and Status Views
         userNameText = findViewById(R.id.userNameText);
         temperatureReading = findViewById(R.id.temperatureText);
         accelerometerReading = findViewById(R.id.accelerometerText);
@@ -77,331 +70,212 @@ public class MonitorActivity extends AppCompatActivity {
         heartRateStatus = findViewById(R.id.heartRateStatus);
         callForHelpButton = findViewById(R.id.callForHelpButton);
         settingsButton = findViewById(R.id.settingsButton);
-        triggerCriticalHeartRateButton = findViewById(R.id.triggerCriticalHeartRateButton);
-        triggerExtremeHeartRateButton = findViewById(R.id.triggerExtremeHeartRateButton);
-        triggerCriticalTemperatureButton = findViewById(R.id.triggerCriticalTemperatureButton);
-        triggerExtremeTemperatureButton = findViewById(R.id.triggerExtremeTemperatureButton);
-        triggerCriticalAccelerometerButton = findViewById(R.id.triggerCriticalAccelerometerButton);
-        triggerExtremeAccelerometerButton = findViewById(R.id.triggerExtremeAccelerometerButton);
 
         heartRateCard = findViewById(R.id.heartRateCard);
         temperatureCard = findViewById(R.id.temperatureCard);
         accelerometerCard = findViewById(R.id.accelerometerCard);
 
-        // Initialize Firebase Database references
         firebaseDatabase = FirebaseDatabase.getInstance();
         heartRateRef = firebaseDatabase.getReference("heartRateValues");
         temperatureRef = firebaseDatabase.getReference("temperatureValues");
 
-        // Example patient details
-        String patientName = "John Doe"; // Replace with actual patient name
-        String patientId = "P12345"; // Replace with actual patient ID
-        userNameText.setText("Hello, " + patientName + " (" + patientId + ")\n");
+        Intent intent = getIntent();
+        userId = intent.getStringExtra("userId"); // Get userId from intent
 
-        // Example caretaker details
-        String caretakerName = "Jane Smith"; // Replace with actual caretaker name
-        String caretakerId = "C67890"; // Replace with actual caretaker ID
-        statusSummary.setText("Your caretaker is " + caretakerName + " (" + caretakerId + ")\n");
+        Log.d(TAG, "onCreate: Received userId: " + userId);
 
-        // TODO: Implement real sensor data reading
-        updateReadings(70, 36.5f, "X: 0.1, Y: 0.2, Z: 9.8");
+        userRef = firebaseDatabase.getReference("users").child(userId);
+        setupListeners();
 
-        // Set OnClickListener for the Call for Help button
-        callForHelpButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showConfirmationDialog();
-            }
+        // Register broadcast receiver for font size updates
+        registerReceiver(new FontSizeUpdateReceiver(), new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE"));
+    }
+
+    private void setupListeners() {
+        callForHelpButton.setOnClickListener(v -> showOptionDialog());
+        settingsButton.setOnClickListener(v -> {
+            Log.d(TAG, "settingsButton: Passing userId to SettingsActivity: " + userId);
+            Intent intent = new Intent(MonitorActivity.this, SettingsActivity.class);
+            intent.putExtra("userId", userId);
+            startActivity(intent);
         });
-
-        // Set OnClickListener for the Settings button
-        settingsButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MonitorActivity.this, SettingsActivity.class);
-                startActivity(intent);
-            }
-        });
-
-        // Set OnClickListeners for the new buttons
-        triggerCriticalHeartRateButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                updateReadings(40, 36.5f, "X: 0.1, Y: 0.2, Z: 9.8"); // Critical heart rate
-            }
-        });
-
-        triggerExtremeHeartRateButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                updateReadings(55, 36.5f, "X: 0.1, Y: 0.2, Z: 9.8"); // Extreme heart rate
-            }
-        });
-
-        triggerCriticalTemperatureButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                updateReadings(70, 34.0f, "X: 0.1, Y: 0.2, Z: 9.8"); // Critical temperature
-            }
-        });
-
-        triggerExtremeTemperatureButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                updateReadings(70, 35.5f, "X: 0.1, Y: 0.2, Z: 9.8"); // Extreme temperature
-            }
-        });
-
-        triggerCriticalAccelerometerButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                updateReadings(70, 36.5f, "X: 0.0, Y: 0.0, Z: 0.0"); // Critical accelerometer
-            }
-        });
-
-        triggerExtremeAccelerometerButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                updateReadings(70, 36.5f, "X: 0.5, Y: 0.5, Z: 0.5"); // Extreme accelerometer
-            }
-        });
-
-        // Set OnClickListener for each CardView to navigate to detail screens
-        heartRateCard.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MonitorActivity.this, HeartRateActivity.class);
-                startActivity(intent);
-            }
-        });
-        temperatureCard.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MonitorActivity.this, TemperatureActivity.class);
-                startActivity(intent);
-            }
-        });
-
-        // Initialize handler and runnables for periodic database updates
-        handler = new Handler();
-
-        heartRateRunnable = new Runnable() {
-            @Override
-            public void run() {
-                saveHeartRateToDatabase();
-                handler.postDelayed(this, INTERVAL);
-            }
-        };
-
-        temperatureRunnable = new Runnable() {
-            @Override
-            public void run() {
-                saveTemperatureToDatabase();
-                handler.postDelayed(this, INTERVAL);
-            }
-        };
-
-        handler.post(heartRateRunnable);
-        handler.post(temperatureRunnable);
-
-        Log.d(TAG, "onCreate: Views initialized");
+        heartRateCard.setOnClickListener(v -> startActivity(new Intent(MonitorActivity.this, HeartRateActivity.class)));
+        temperatureCard.setOnClickListener(v -> startActivity(new Intent(MonitorActivity.this, TemperatureActivity.class)));
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        refreshUserDetails();
         float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
         updateFontSize(fontSize);
+    }
+
+    private void refreshUserDetails() {
+        Log.d(TAG, "refreshUserDetails: Fetching user details for userId: " + userId);
+        userRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    String firstName = dataSnapshot.child("firstName").getValue(String.class);
+                    String lastName = dataSnapshot.child("lastName").getValue(String.class);
+                    userNameText.setText(String.format("Hello, %s %s (%s)\n", firstName, lastName, userId));
+
+                    Log.d(TAG, "refreshUserDetails: User details found - " + firstName + " " + lastName);
+
+                    // Check for caretaker details
+                    if (dataSnapshot.child("caretakerName").exists() && dataSnapshot.child("caretakerId").exists()) {
+                        String caretakerName = dataSnapshot.child("caretakerName").getValue(String.class);
+                        String caretakerId = dataSnapshot.child("caretakerId").getValue(String.class);
+                        statusSummary.setText(String.format("Your caretaker is %s (%s)\n\n", caretakerName, caretakerId));
+                    } else {
+                        statusSummary.setText("You do not have a caretaker registered yet.\n\n");
+                    }
+                } else {
+                    Log.e(TAG, "No data found for user");
+                    Toast.makeText(MonitorActivity.this, "No user data found", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, "Failed to refresh user data", databaseError.toException());
+                Toast.makeText(MonitorActivity.this, "Failed to refresh user data", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        handler.removeCallbacks(heartRateRunnable); // Stop updates when activity is paused
-        handler.removeCallbacks(temperatureRunnable); // Stop updates when activity is paused
-    }
-
-    private void updateReadings(int heartRate, float temperature, String accelerometer) {
-        // Update heart rate reading
-        heartRateReading.setText(heartRate + " bpm");
-        if (heartRate >= 60 && heartRate <= 100) {
-            heartRateStatus.setBackgroundResource(R.drawable.indicator_green);
-        } else if (heartRate >= 50 && heartRate <= 110) {
-            heartRateStatus.setBackgroundResource(R.drawable.indicator_yellow);
-        } else {
-            heartRateStatus.setBackgroundResource(R.drawable.indicator_red);
-            showCriticalAlertDialog("Heart Rate");
-        }
-
-        // Update temperature reading
-        temperatureReading.setText(temperature + "°C");
-        if (temperature >= 36 && temperature <= 37) {
-            temperatureStatus.setBackgroundResource(R.drawable.indicator_green);
-        } else if (temperature >= 35 && temperature <= 38) {
-            temperatureStatus.setBackgroundResource(R.drawable.indicator_yellow);
-        } else {
-            temperatureStatus.setBackgroundResource(R.drawable.indicator_red);
-            showCriticalAlertDialog("Temperature");
-        }
-
-        // Update accelerometer reading
-        accelerometerReading.setText(accelerometer);
-        String[] values = accelerometer.split(", ");
-        float x = Float.parseFloat(values[0].split(": ")[1]);
-        float y = Float.parseFloat(values[1].split(": ")[1]);
-        float z = Float.parseFloat(values[2].split(": ")[1]);
-
-        if (isFallDetected(x, y, z)) {
-            accelerometerStatus.setBackgroundResource(R.drawable.indicator_red);
-            showCriticalAlertDialog("Accelerometer");
-        } else if (isExtremeMovement(x, y, z)) {
-            accelerometerStatus.setBackgroundResource(R.drawable.indicator_yellow);
-        } else {
-            accelerometerStatus.setBackgroundResource(R.drawable.indicator_green);
+        if (handler != null) {
+            if (heartRateRunnable != null) {
+                handler.removeCallbacks(heartRateRunnable);
+            }
+            if (temperatureRunnable != null) {
+                handler.removeCallbacks(temperatureRunnable);
+            }
         }
     }
 
-    private boolean isFallDetected(float x, float y, float z) {
-        float threshold = 15.0f; // Example threshold for a fall impact
-        return (Math.abs(x) > threshold || Math.abs(y) > threshold || Math.abs(z) > threshold) && (x == 0 && y == 0 && z == 0);
-    }
-
-    private boolean isExtremeMovement(float x, float y, float z) {
-        float threshold = 5.0f; // Example threshold for extreme movement
-        return (Math.abs(x) > threshold || Math.abs(y) > threshold || Math.abs(z) > threshold);
-    }
-
-    private void showCriticalAlertDialog(String metric) {
+    private void showOptionDialog() {
+        String[] options = {"Call Caretaker", "Call Emergency Contact", "Call Emergency Services"};
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage("Your " + metric + " is critical. Do you want to send an alert?")
-                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        // Send alert to caretaker
-                        sendAlertToCaretaker();
-                    }
-                })
-                .setNegativeButton("No", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        // Dismiss the dialog
-                        dialog.dismiss();
-                    }
-                });
-        AlertDialog dialog = builder.create();
-        dialog.show();
-
-        // Set font size for dialog buttons and message
-        float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
-        TextView messageView = dialog.findViewById(android.R.id.message);
-        if (messageView != null) {
-            messageView.setTextSize(fontSize);
-        }
-        Button positiveButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
-        if (positiveButton != null) {
-            positiveButton.setTextSize(fontSize);
-        }
-        Button negativeButton = dialog.getButton(DialogInterface.BUTTON_NEGATIVE);
-        if (negativeButton != null) {
-            negativeButton.setTextSize(fontSize);
-        }
+        builder.setTitle("Select an Option").setItems(options, (dialog, which) -> {
+            if (which == 0) {
+                confirmCall("Caretaker");
+            } else if (which == 1) {
+                confirmCall("Emergency Contact");
+            } else if (which == 2) {
+                confirmCall("Emergency Services");
+            }
+        }).show();
     }
 
-    private void showConfirmationDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage("Are you sure you want to call for help?")
-                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        // Send alert to caretaker
-                        sendAlertToCaretaker();
-                    }
-                })
-                .setNegativeButton("No", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        // Dismiss the dialog
-                        dialog.dismiss();
-                    }
-                });
-        AlertDialog dialog = builder.create();
-        dialog.show();
+    private void confirmCall(String type) {
+        if (type.equals("Emergency Services")) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(MonitorActivity.this);
+            builder.setMessage("Are you sure you want to call Emergency Services?")
+                    .setPositiveButton("Yes", (dialog, id) -> callNumber("911"))
+                    .setNegativeButton("No", (dialog, id) -> dialog.dismiss())
+                    .show();
+            return;
+        }
 
-        // Set font size for dialog buttons and message
-        float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
-        TextView messageView = dialog.findViewById(android.R.id.message);
-        if (messageView != null) {
-            messageView.setTextSize(fontSize);
-        }
-        Button positiveButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
-        if (positiveButton != null) {
-            positiveButton.setTextSize(fontSize);
-        }
-        Button negativeButton = dialog.getButton(DialogInterface.BUTTON_NEGATIVE);
-        if (negativeButton != null) {
-            negativeButton.setTextSize(fontSize);
-        }
+        userRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                final String phoneNumber;
+                if (type.equals("Caretaker")) {
+                    if (dataSnapshot.child("caretakerPhoneNumber").exists()) {
+                        phoneNumber = dataSnapshot.child("caretakerPhoneNumber").getValue(String.class);
+                    } else {
+                        Toast.makeText(MonitorActivity.this, "No caretaker number registered!", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                } else if (type.equals("Emergency Contact")) {
+                    if (dataSnapshot.child("emergencyContact").exists()) {
+                        phoneNumber = dataSnapshot.child("emergencyContact").getValue(String.class);
+                    } else {
+                        Toast.makeText(MonitorActivity.this, "No emergency contact number registered!", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                } else {
+                    phoneNumber = null; // This case should not occur
+                }
+
+                if (phoneNumber != null) {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(MonitorActivity.this);
+                    builder.setMessage("Are you sure you want to call your " + type + "?")
+                            .setPositiveButton("Yes", (dialog, id) -> callNumber(phoneNumber))
+                            .setNegativeButton("No", (dialog, id) -> dialog.dismiss())
+                            .show();
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, "Failed to fetch phone number", databaseError.toException());
+                Toast.makeText(MonitorActivity.this, "Failed to fetch phone number", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
-    private void sendAlertToCaretaker() {
-        String caretakerId = "C67890"; // Replace with actual caretaker ID
-        String patientName = "John Doe"; // Replace with actual patient name
-
-        // Create the message
-        RemoteMessage message = new RemoteMessage.Builder(caretakerId + "@gcm.googleapis.com")
-                .setMessageId(Integer.toString(messageId.incrementAndGet()))
-                .addData("title", "Patient Alert")
-                .addData("message", patientName + " has sent an alert.")
-                .build();
-
-        // Send the message
-        FirebaseMessaging.getInstance().send(message);
-
-        Log.d(TAG, "Alert sent to caretaker with ID: " + caretakerId);
+    private void callNumber(String phoneNumber) {
+        Intent callIntent = new Intent(Intent.ACTION_CALL);
+        callIntent.setData(Uri.parse("tel:" + phoneNumber));
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CALL_PHONE}, 101);
+        } else {
+            startActivity(callIntent);
+        }
     }
 
     private void updateFontSize(float fontSize) {
-        userNameText.setTextSize(fontSize);
-        statusSummary.setTextSize(fontSize);
-        temperatureReading.setTextSize(fontSize);
-        heartRateReading.setTextSize(fontSize);
-        accelerometerReading.setTextSize(fontSize);
-        ((TextView) findViewById(R.id.temperatureTitle)).setTextSize(fontSize);
-        ((TextView) findViewById(R.id.heartRateTitle)).setTextSize(fontSize);
-        ((TextView) findViewById(R.id.accelerometerTitle)).setTextSize(fontSize);
-        callForHelpButton.setTextSize(fontSize);
+        // Update font sizes for text views
+        userNameText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        statusSummary.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        temperatureReading.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        heartRateReading.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        accelerometerReading.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
 
-        // Update settings button size
-        int sizeInDp = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, fontSize, getResources().getDisplayMetrics());
-        ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) settingsButton.getLayoutParams();
-        params.width = sizeInDp;
-        params.height = sizeInDp;
-        settingsButton.setLayoutParams(params);
+        // Update font size for titles if they exist
+        TextView heartRateTitle = findViewById(R.id.heartRateTitle);
+        TextView temperatureTitle = findViewById(R.id.temperatureTitle);
+        TextView accelerometerTitle = findViewById(R.id.accelerometerTitle);
+
+        if (heartRateTitle != null) heartRateTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        if (temperatureTitle != null) temperatureTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        if (accelerometerTitle != null) accelerometerTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+
+        // Update font size for the button
+        Button callForHelpButton = findViewById(R.id.callForHelpButton);
+        callForHelpButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
     }
 
     private void saveHeartRateToDatabase() {
-        String userId = "100"; // Replace with actual user ID
         long timestamp = System.currentTimeMillis();
-        String heartRateValue = heartRateReading.getText().toString();
-
+        String heartRateValue = heartRateReading.getText().toString().replace(" bpm", "").trim();
         Map<String, Object> heartRateData = new HashMap<>();
-        heartRateData.put("id", userId);
-        heartRateData.put("heartVal", Integer.parseInt(heartRateValue.replace(" bpm", "").trim()));
+        heartRateData.put("heartVal", Integer.parseInt(heartRateValue));
         heartRateData.put("heartTime", timestamp);
-
-        heartRateRef.push().setValue(heartRateData)
-                .addOnSuccessListener(aVoid -> Log.d(TAG, "Heart rate data saved successfully"))
-                .addOnFailureListener(e -> Log.e(TAG, "Failed to save heart rate data", e));
+        heartRateRef.push().setValue(heartRateData);
     }
 
     private void saveTemperatureToDatabase() {
-        String userId = "100"; // Replace with actual user ID
         long timestamp = System.currentTimeMillis();
-        String temperatureValue = temperatureReading.getText().toString();
-
+        String temperatureValue = temperatureReading.getText().toString().replace("°C", "").trim();
         Map<String, Object> temperatureData = new HashMap<>();
-        temperatureData.put("id", userId);
-        temperatureData.put("temperatureVal", Float.parseFloat(temperatureValue.replace("°C", "").trim()));
+        temperatureData.put("temperatureVal", Float.parseFloat(temperatureValue));
         temperatureData.put("temperatureTime", timestamp);
+        temperatureRef.push().setValue(temperatureData);
+    }
 
-        temperatureRef.push().setValue(temperatureData)
-                .addOnSuccessListener(aVoid -> Log.d(TAG, "Temperature data saved successfully"))
-                .addOnFailureListener(e -> Log.e(TAG, "Failed to save temperature data", e));
+    private class FontSizeUpdateReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            float fontSize = intent.getFloatExtra("font_size", 18);
+            updateFontSize(fontSize);
+        }
     }
 }
