@@ -1,20 +1,25 @@
 package com.example.elderly_health_monitor_app;
 
-import android.content.Intent;
-import android.os.Bundle;
-import android.util.Log;
-import android.view.View;
-import android.widget.TextView;
-import android.widget.Button;
-import android.widget.Spinner;
-import android.widget.ArrayAdapter;
-import android.widget.AdapterView;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
+import android.util.Log;
+import android.util.TypedValue;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.GridLayout;
+import android.widget.ImageButton;
+import android.widget.Spinner;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
@@ -32,9 +37,10 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
     private Button addPatientButton;
     private Spinner sortSpinner;
     private Button toggleSortOrderButton;
+    private ImageButton settingsButton;
 
     private ArrayList<Patient> patients = new ArrayList<>();
-    private boolean isAscending = true; // Default sorting order
+    private boolean isAscending = true;
 
     private static final String TAG = "CaretakerMonitorActivity";
     private static final String CHANNEL_ID = "patient_alerts_channel";
@@ -49,19 +55,20 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         addPatientButton = findViewById(R.id.addPatientButton);
         sortSpinner = findViewById(R.id.sortSpinner);
         toggleSortOrderButton = findViewById(R.id.toggleSortOrderButton);
+        settingsButton = findViewById(R.id.settingsButton);
 
         // Retrieve caretaker details from intent
         Intent intent = getIntent();
         String caretakerName = intent.getStringExtra("caretakerName");
-        String caretakerLicense = intent.getStringExtra("caretakerLicense");
+        String caretakerId = intent.getStringExtra("caretakerId");
 
-        Log.d(TAG, "Caretaker details - Name: " + caretakerName + ", License: " + caretakerLicense);
+        Log.d(TAG, "Caretaker details - Name: " + caretakerName + ", ID: " + caretakerId);
 
-        userNameText.setText("Hello, " + caretakerName + " (" + caretakerLicense + ")");
+        userNameText.setText("Hello, " + caretakerName + " (" + caretakerId + ")");
 
         // Setup Spinner for sorting
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
-                R.array.sort_options, android.R.layout.simple_spinner_item);
+                R.array.sort_options, R.layout.spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         sortSpinner.setAdapter(adapter);
 
@@ -96,45 +103,53 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             }
         });
 
-        // Initialize Firebase Messaging
-        FirebaseMessaging.getInstance().subscribeToTopic(caretakerLicense)
+        // Handle settings button click
+        settingsButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent settingsIntent = new Intent(CaretakerMonitorActivity.this, CaretakerSettingsActivity.class);
+                settingsIntent.putExtra("caretakerLicense", caretakerId);
+                startActivity(settingsIntent);
+            }
+        });
+
+        FirebaseMessaging.getInstance().subscribeToTopic(caretakerId)
                 .addOnCompleteListener(task -> {
                     String msg = task.isSuccessful() ? "Subscribed to patient alerts" : "Subscription failed";
                     Log.d(TAG, msg);
                 });
 
-        // Create notification channel
         createNotificationChannel();
 
-        // TODO: Load existing patients from database or other storage
+        registerReceiver(new FontSizeUpdateReceiver(), new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE"));
     }
 
     private void sortPatients(int position) {
         Comparator<Patient> comparator;
 
         switch (position) {
-            case 0: // Sort by name
+            case 0:
                 comparator = Comparator.comparing(Patient::getName);
                 break;
-            case 1: // Sort by patient ID
+            case 1:
                 comparator = Comparator.comparing(Patient::getPatientID);
                 break;
-            case 2: // Sort by date of birth
+            case 2:
                 comparator = Comparator.comparing(Patient::getDob);
                 break;
-            case 4: // Sort by temperature
+            case 4:
                 comparator = Comparator.comparingDouble(Patient::getTemperature);
                 break;
-            case 5: // Sort by heart rate
+            case 5:
                 comparator = Comparator.comparingInt(Patient::getHeartRate);
                 break;
-            case 6: // Sort by gender
+            case 6:
                 comparator = Comparator.comparing(Patient::getGender);
                 break;
-            case 7: // Sort by age
+            case 7:
                 comparator = Comparator.comparingInt(Patient::getAge);
                 break;
-            case 8: // Sort by last visit date
+            case 8:
                 comparator = Comparator.comparing(Patient::getLastVisitDate);
                 break;
             default:
@@ -146,20 +161,44 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         }
 
         Collections.sort(patients, comparator);
-
-        // Update UI with sorted patients
         updatePatientCards();
     }
 
     private void updatePatientCards() {
-        // TODO: Update the UI to display sorted patient cards
+        GridLayout patientGridLayout = findViewById(R.id.patientGridLayout); // Assuming you have an ID for your GridLayout
+        patientGridLayout.removeAllViews();
+
+        for (Patient patient : patients) {
+            View patientCardView = getLayoutInflater().inflate(R.layout.patient_card, null);
+
+            TextView patientNameTextView = patientCardView.findViewById(R.id.patientNameTextView);
+            TextView patientIDTextView = patientCardView.findViewById(R.id.patientIDTextView);
+            TextView patientHeartRateText = patientCardView.findViewById(R.id.patientHeartRateText);
+            TextView patientTemperatureText = patientCardView.findViewById(R.id.patientTemperatureText);
+            TextView patientAccelerometerText = patientCardView.findViewById(R.id.patientAccelerometerText);
+
+            patientNameTextView.setText(patient.getName());
+            patientIDTextView.setText(patient.getPatientID());
+            patientHeartRateText.setText("Heart Rate: " + patient.getHeartRate());
+            patientTemperatureText.setText("Temperature: " + patient.getTemperature() + "°C");
+            patientAccelerometerText.setText("Accelerometer: X: " + patient.getAccelerometerX() + ", Y: " + patient.getAccelerometerY() + ", Z: " + patient.getAccelerometerZ());
+
+            // Set the text size
+            float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
+            patientNameTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+            patientIDTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+            patientHeartRateText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+            patientTemperatureText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+            patientAccelerometerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+
+            patientGridLayout.addView(patientCardView);
+        }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 1 && resultCode == RESULT_OK) {
-            // Handle new patient data from AddPatientActivity
             String name = data.getStringExtra("name");
             String dob = data.getStringExtra("dob");
             String patientID = data.getStringExtra("patientID");
@@ -209,5 +248,58 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
         notificationManager.notify(0, notificationBuilder.build());
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
+        updateFontSize(fontSize);
+    }
+
+    private void updateFontSize(float fontSize) {
+        userNameText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        statusSummary.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        addPatientButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        toggleSortOrderButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+
+        // Update Spinner text size
+        for (int i = 0; i < sortSpinner.getCount(); i++) {
+            View item = sortSpinner.getSelectedView();
+            if (item != null && item instanceof TextView) {
+                ((TextView) item).setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+            }
+        }
+
+        // Update font size for patient cards
+        updatePatientCardsFontSize(fontSize);
+    }
+
+    private void updatePatientCardsFontSize(float fontSize) {
+        GridLayout patientGridLayout = findViewById(R.id.patientGridLayout); // Assuming you have an ID for your GridLayout
+
+        for (int i = 0; i < patientGridLayout.getChildCount(); i++) {
+            View patientCardView = patientGridLayout.getChildAt(i);
+
+            TextView patientNameTextView = patientCardView.findViewById(R.id.patientNameTextView);
+            TextView patientIDTextView = patientCardView.findViewById(R.id.patientIDTextView);
+            TextView patientHeartRateText = patientCardView.findViewById(R.id.patientHeartRateText);
+            TextView patientTemperatureText = patientCardView.findViewById(R.id.patientTemperatureText);
+            TextView patientAccelerometerText = patientCardView.findViewById(R.id.patientAccelerometerText);
+
+            patientNameTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+            patientIDTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+            patientHeartRateText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+            patientTemperatureText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+            patientAccelerometerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        }
+    }
+
+    private class FontSizeUpdateReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            float fontSize = intent.getFloatExtra("font_size", 18);
+            updateFontSize(fontSize);
+        }
     }
 }

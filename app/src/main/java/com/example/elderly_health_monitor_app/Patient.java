@@ -82,4 +82,28 @@ public class Patient {
     public void setAccelerometerReading(String accelerometerReading) {
         this.accelerometerReading = accelerometerReading;
     }
+
+    public double getAccelerometerX() {
+        return parseAccelerometerValue(0);
+    }
+
+    public double getAccelerometerY() {
+        return parseAccelerometerValue(1);
+    }
+
+    public double getAccelerometerZ() {
+        return parseAccelerometerValue(2);
+    }
+
+    private double parseAccelerometerValue(int index) {
+        String[] values = accelerometerReading.split(",");
+        if (values.length > index) {
+            try {
+                return Double.parseDouble(values[index].trim());
+            } catch (NumberFormatException e) {
+                e.printStackTrace();
+            }
+        }
+        return 0.0;
+    }
 }

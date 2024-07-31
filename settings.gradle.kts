@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Elderly-Health-Monitor-App"
 include(":app")
+//EOF

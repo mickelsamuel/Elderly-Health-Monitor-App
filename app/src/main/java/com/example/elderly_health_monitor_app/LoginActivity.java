@@ -29,8 +29,7 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Make sure the layout file name here matches the actual XML file name
-        setContentView(R.layout.activity_login_page);  // Changed from activity_login_page to activity_login if your file is named activity_login.xml
+        setContentView(R.layout.activity_login_page);
 
         editTextFirstName = findViewById(R.id.editTextFirstName);
         editTextLastName = findViewById(R.id.editTextLastName);
@@ -57,7 +56,6 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
-        // Adjust the query to use both firstName and lastName
         usersRef.orderByChild("firstName").equalTo(firstName)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
