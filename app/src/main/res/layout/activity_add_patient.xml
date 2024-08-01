@@ -1,62 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:fillViewport="true">
 
-    <EditText
-        android:id="@+id/patientNameInput"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Name"
-        android:inputType="textPersonName" />
+        android:orientation="vertical"
+        android:padding="16dp">
 
-    <EditText
-        android:id="@+id/patientDOBInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Date of Birth"
-        android:inputType="date" />
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilPatientID"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:hint="Patient ID"
+            app:startIconDrawable="@drawable/ic_person">
 
-    <EditText
-        android:id="@+id/patientIDInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Patient ID"
-        android:inputType="number" />
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/patientIDInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:textColor="@android:color/black"/>
 
-    <EditText
-        android:id="@+id/patientGenderInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Gender"
-        android:inputType="text" />
+        </com.google.android.material.textfield.TextInputLayout>
 
-    <EditText
-        android:id="@+id/patientAgeInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Age"
-        android:inputType="number" />
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilLastVisitDate"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:hint="Last Visit Date"
+            app:startIconDrawable="@drawable/ic_calendar">
 
-    <EditText
-        android:id="@+id/patientLastVisitDateInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Last Visit Date"
-        android:inputType="date" />
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/patientLastVisitDateInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:focusable="false"
+                android:clickable="true"
+                android:textColor="@android:color/black"/>
 
-    <Button
-        android:id="@+id/savePatientButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Save" />
+        </com.google.android.material.textfield.TextInputLayout>
 
-    <Button
-        android:id="@+id/backButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Back"
-        android:layout_marginTop="8dp"/>
-</LinearLayout>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/savePatientButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="ADD" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/backButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Back"
+            android:layout_marginTop="8dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
