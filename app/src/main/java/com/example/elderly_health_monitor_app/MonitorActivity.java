@@ -119,7 +119,7 @@ public class MonitorActivity extends AppCompatActivity {
                 if (dataSnapshot.exists()) {
                     String firstName = dataSnapshot.child("firstName").getValue(String.class);
                     String lastName = dataSnapshot.child("lastName").getValue(String.class);
-                    userNameText.setText(String.format("Hello, %s %s (%s)\n", firstName, lastName, userId));
+                    userNameText.setText(String.format("Hello, %s %s \n(%s)\n", firstName, lastName, userId));
 
                     Log.d(TAG, "refreshUserDetails: User details found - " + firstName + " " + lastName);
 

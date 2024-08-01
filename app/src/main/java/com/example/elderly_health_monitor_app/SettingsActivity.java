@@ -10,13 +10,12 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.android.material.textfield.TextInputLayout;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -238,15 +237,14 @@ public class SettingsActivity extends AppCompatActivity {
         new AlertDialog.Builder(this)
                 .setTitle("Confirm Logout")
                 .setMessage("Are you sure you want to logout?")
-                .setPositiveButton("Yes", (dialog, which) -> navigateToLogin())
+                .setPositiveButton("Yes", (dialog, which) -> logout())
                 .setNegativeButton("No", null)
                 .show();
     }
 
-    private void navigateToLogin() {
-        Intent intent = new Intent(this, LoginActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
+    private void logout() {
+        clearLoginPreferences();
+        navigateToLogin();
     }
 
     private void setupChangePassword() {
@@ -326,12 +324,30 @@ public class SettingsActivity extends AppCompatActivity {
         new AlertDialog.Builder(this)
                 .setTitle("Delete Account")
                 .setMessage("Are you sure you want to delete your account? This action cannot be undone.")
-                .setPositiveButton("Delete", (dialog, which) -> deleteAccount())
+                .setPositiveButton("Delete", (dialog, which) -> showDeleteAccountPasswordDialog())
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    private void deleteAccount() {
+    private void showDeleteAccountPasswordDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Confirm Password");
+
+        View viewInflated = LayoutInflater.from(this).inflate(R.layout.dialog_confirm_password, null);
+        inputCurrentPassword = viewInflated.findViewById(R.id.input_current_password);
+
+        builder.setView(viewInflated);
+
+        builder.setPositiveButton("Delete Account", (dialog, which) -> {
+            String currentPassword = inputCurrentPassword.getText().toString();
+            deleteAccount(currentPassword);
+        });
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
+
+        builder.show();
+    }
+
+    private void deleteAccount(String currentPassword) {
         if (currentUserId == null || currentUserId.isEmpty()) {
             Log.e(TAG, "No authenticated user found.");
             Toast.makeText(SettingsActivity.this, "No authenticated user found. Please log in again.", Toast.LENGTH_SHORT).show();
@@ -339,17 +355,52 @@ public class SettingsActivity extends AppCompatActivity {
             return;
         }
 
-        // Delete user data from the database
-        databaseRef.removeValue().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                Log.d(TAG, "Account deleted successfully");
-                Toast.makeText(SettingsActivity.this, "Account deleted successfully", Toast.LENGTH_SHORT).show();
-                navigateToLogin();
-            } else {
-                Log.e(TAG, "Failed to delete account", task.getException());
-                Toast.makeText(SettingsActivity.this, "Failed to delete account: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+        // Re-authenticate the user manually by checking the current password
+        databaseRef.child("password").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                String storedPassword = dataSnapshot.getValue(String.class);
+                if (storedPassword != null && storedPassword.equals(currentPassword)) {
+                    // Delete user data from the database
+                    databaseRef.removeValue().addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            Log.d(TAG, "Account deleted successfully");
+                            Toast.makeText(SettingsActivity.this, "Account deleted successfully", Toast.LENGTH_SHORT).show();
+                            clearLoginPreferences();
+                            navigateToLogin(); // Navigate to login page
+                        } else {
+                            Log.e(TAG, "Failed to delete account", task.getException());
+                            Toast.makeText(SettingsActivity.this, "Failed to delete account: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                } else {
+                    Log.e(TAG, "Authentication failed. Please check your current password.");
+                    Toast.makeText(SettingsActivity.this, "Authentication failed. Please check your current password.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, "Failed to read password", databaseError.toException());
+                Toast.makeText(SettingsActivity.this, "Failed to read password", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void clearLoginPreferences() {
+        SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.clear();
+        editor.apply();
+    }
+
+    private void navigateToLogin() {
+        Log.d(TAG, "Navigating to LoginActivity");
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
+        Log.d(TAG, "Finished navigating to LoginActivity");
     }
 
     @Override

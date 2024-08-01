@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
@@ -7,4 +6,11 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="colorPrimary">#FF6200EE</color> <!-- Added -->
+    <color name="colorPrimaryDark">#FF3700B3</color> <!-- Added -->
+    <color name="colorAccent">#FF03DAC5</color> <!-- Added -->
+    <color name="your_primary_color">#FF6200EE</color>
+    <color name="your_primary_text_color">#FF000000</color>
+    <color name="your_secondary_text_color">#FF888888</color>
+    <color name="button_text_color">#FF6200EE</color> <!-- Added for button text -->
 </resources>

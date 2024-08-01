@@ -1,6 +1,7 @@
 package com.example.elderly_health_monitor_app;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -44,6 +45,17 @@ public class LoginActivity extends AppCompatActivity {
                 startActivity(new Intent(LoginActivity.this, AccountCreationActivity.class));
             }
         });
+
+        // Check if user is already logged in
+        SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
+        boolean isLoggedIn = prefs.getBoolean("isLoggedIn", false);
+        if (isLoggedIn) {
+            String role = prefs.getString("role", "");
+            String firstName = prefs.getString("firstName", "");
+            String lastName = prefs.getString("lastName", "");
+            String userId = prefs.getString("userId", "");
+            navigateToActivity(role, firstName, lastName, userId);
+        }
     }
 
     public void onLoginClick(View view) {
@@ -89,6 +101,51 @@ public class LoginActivity extends AppCompatActivity {
         String lastName = userSnapshot.child("lastName").getValue(String.class);
         String userId = userSnapshot.getKey();
 
+        SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean("isLoggedIn", true);
+        editor.putString("role", role);
+        editor.putString("firstName", firstName);
+        editor.putString("lastName", lastName);
+        editor.putString("userId", userId);
+        editor.apply();
+
+        if ("caretaker".equals(role)) {
+            startCaretakerActivity(firstName, lastName, userId);
+        } else if ("user".equals(role)) {
+            startUserActivity(firstName, lastName, userId);
+        } else {
+            Toast.makeText(this, "Access denied: Invalid role", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+        private void clearLoginPreferences() {
+            SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.clear();
+            editor.apply();
+        }
+
+        private void navigateToLogin() {
+            clearLoginPreferences();
+            Intent intent = new Intent(this, LoginActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+        }
+
+
+    private void saveLoginState(String role, String firstName, String lastName, String userId) {
+        SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean("isLoggedIn", true);
+        editor.putString("role", role);
+        editor.putString("firstName", firstName);
+        editor.putString("lastName", lastName);
+        editor.putString("userId", userId);
+        editor.apply();
+    }
+
+    private void navigateToActivity(String role, String firstName, String lastName, String userId) {
         if ("caretaker".equals(role)) {
             startCaretakerActivity(firstName, lastName, userId);
         } else if ("user".equals(role)) {

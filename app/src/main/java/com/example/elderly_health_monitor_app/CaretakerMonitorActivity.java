@@ -64,7 +64,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
         Log.d(TAG, "Caretaker details - Name: " + caretakerName + ", ID: " + caretakerId);
 
-        userNameText.setText("Hello, " + caretakerName + " (" + caretakerId + ")");
+        userNameText.setText("Hello, " + caretakerName + "\n(" + caretakerId + ")");
 
         // Setup Spinner for sorting
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
@@ -122,6 +122,10 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         createNotificationChannel();
 
         registerReceiver(new FontSizeUpdateReceiver(), new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE"));
+
+        // Set initial font sizes based on preferences
+        float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
+        updateFontSize(fontSize);
     }
 
     private void sortPatients(int position) {

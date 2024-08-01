@@ -2,6 +2,7 @@ package com.example.elderly_health_monitor_app;
 
 import android.app.DatePickerDialog;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -16,15 +17,18 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import java.util.Calendar;
 import java.util.Objects;
 
 public class PatientFragment extends Fragment {
 
-    private TextInputLayout tilFirstName, tilLastName, tilPhoneNumber, tilMedicalCard, tilPassword, tilDob, tilAge, tilGender, tilEmergencyContact;
-    private TextInputEditText editTextFirstName, editTextLastName, editTextPhoneNumber, editTextMedicalCard, editTextPassword, editTextDob, editTextAge, editTextEmergencyContact;
+    private TextInputLayout tilFirstName, tilLastName, tilPhoneNumber, tilMedicalCard, tilPassword, tilConfirmPassword, tilDob, tilAge, tilGender, tilEmergencyContact;
+    private TextInputEditText editTextFirstName, editTextLastName, editTextPhoneNumber, editTextMedicalCard, editTextPassword, editTextConfirmPassword, editTextDob, editTextAge, editTextEmergencyContact;
     private AutoCompleteTextView editTextGender;
     private MaterialButton buttonCreateUser;
     private FirebaseDatabase firebaseDatabase;
@@ -50,6 +54,7 @@ public class PatientFragment extends Fragment {
         tilPhoneNumber = view.findViewById(R.id.tilPhoneNumber);
         tilMedicalCard = view.findViewById(R.id.tilMedicalCard);
         tilPassword = view.findViewById(R.id.tilPassword);
+        tilConfirmPassword = view.findViewById(R.id.tilConfirmPassword);
         tilDob = view.findViewById(R.id.tilDob);
         tilAge = view.findViewById(R.id.tilAge);
         tilGender = view.findViewById(R.id.tilGender);
@@ -60,6 +65,7 @@ public class PatientFragment extends Fragment {
         editTextPhoneNumber = view.findViewById(R.id.editTextPhoneNumber);
         editTextMedicalCard = view.findViewById(R.id.editTextMedicalCard);
         editTextPassword = view.findViewById(R.id.editTextPassword);
+        editTextConfirmPassword = view.findViewById(R.id.editTextConfirmPassword);
         editTextDob = view.findViewById(R.id.editTextDob);
         editTextAge = view.findViewById(R.id.editTextAge);
         editTextGender = view.findViewById(R.id.editTextGender);
@@ -90,7 +96,8 @@ public class PatientFragment extends Fragment {
         int day = calendar.get(Calendar.DAY_OF_MONTH);
 
         DatePickerDialog datePickerDialog = new DatePickerDialog(
-                requireContext(),
+                getActivity(), // Use getActivity() for context
+                R.style.CustomDatePickerDialog, // Apply the custom style here
                 (view, selectedYear, selectedMonth, selectedDay) -> {
                     String date = selectedYear + "-" + (selectedMonth + 1) + "-" + selectedDay;
                     editTextDob.setText(date);
@@ -111,7 +118,13 @@ public class PatientFragment extends Fragment {
             age--;
         }
 
-        editTextAge.setText(String.valueOf(age));
+        if (age < 20) {
+            editTextDob.setText("");
+            editTextAge.setText("");
+            Toast.makeText(getActivity(), "Age must be at least 20 years", Toast.LENGTH_SHORT).show();
+        } else {
+            editTextAge.setText(String.valueOf(age));
+        }
     }
 
     private void setupCreateUserButton() {
@@ -128,15 +141,81 @@ public class PatientFragment extends Fragment {
 
     private void validateAndCreateUser() {
         if (validateInputs()) {
-            createUserAccount();
+            checkUniqueFields();
         }
     }
 
     private boolean validateInputs() {
         boolean isValid = true;
 
-        // Validate all the existing fields as before
-        // Add validation for the new emergency contact field
+        // Validate first name
+        if (TextUtils.isEmpty(Objects.requireNonNull(editTextFirstName.getText()).toString().trim())) {
+            tilFirstName.setError("First name is required");
+            isValid = false;
+        } else {
+            tilFirstName.setError(null);
+        }
+
+        // Validate last name
+        if (TextUtils.isEmpty(Objects.requireNonNull(editTextLastName.getText()).toString().trim())) {
+            tilLastName.setError("Last name is required");
+            isValid = false;
+        } else {
+            tilLastName.setError(null);
+        }
+
+        // Validate phone number
+        if (TextUtils.isEmpty(Objects.requireNonNull(editTextPhoneNumber.getText()).toString().trim())) {
+            tilPhoneNumber.setError("Phone number is required");
+            isValid = false;
+        } else {
+            tilPhoneNumber.setError(null);
+        }
+
+        // Validate medical card
+        if (TextUtils.isEmpty(Objects.requireNonNull(editTextMedicalCard.getText()).toString().trim())) {
+            tilMedicalCard.setError("Medical card is required");
+            isValid = false;
+        } else {
+            tilMedicalCard.setError(null);
+        }
+
+        // Validate password
+        if (TextUtils.isEmpty(Objects.requireNonNull(editTextPassword.getText()).toString().trim())) {
+            tilPassword.setError("Password is required");
+            isValid = false;
+        } else {
+            tilPassword.setError(null);
+        }
+
+        // Validate confirm password
+        if (TextUtils.isEmpty(Objects.requireNonNull(editTextConfirmPassword.getText()).toString().trim())) {
+            tilConfirmPassword.setError("Confirm password is required");
+            isValid = false;
+        } else if (!editTextPassword.getText().toString().trim().equals(editTextConfirmPassword.getText().toString().trim())) {
+            tilConfirmPassword.setError("Passwords do not match");
+            isValid = false;
+        } else {
+            tilConfirmPassword.setError(null);
+        }
+
+        // Validate date of birth
+        if (TextUtils.isEmpty(Objects.requireNonNull(editTextDob.getText()).toString().trim())) {
+            tilDob.setError("Date of birth is required");
+            isValid = false;
+        } else {
+            tilDob.setError(null);
+        }
+
+        // Validate gender
+        if (TextUtils.isEmpty(Objects.requireNonNull(editTextGender.getText()).toString().trim())) {
+            tilGender.setError("Gender is required");
+            isValid = false;
+        } else {
+            tilGender.setError(null);
+        }
+
+        // Validate emergency contact
         if (TextUtils.isEmpty(Objects.requireNonNull(editTextEmergencyContact.getText()).toString().trim())) {
             tilEmergencyContact.setError("Emergency contact is required");
             isValid = false;
@@ -145,6 +224,41 @@ public class PatientFragment extends Fragment {
         }
 
         return isValid;
+    }
+
+    private void checkUniqueFields() {
+        final String phoneNumber = Objects.requireNonNull(editTextPhoneNumber.getText()).toString().trim();
+        final String medicalCard = Objects.requireNonNull(editTextMedicalCard.getText()).toString().trim();
+
+        usersRef.orderByChild("phoneNumber").equalTo(phoneNumber).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    tilPhoneNumber.setError("Phone number already registered");
+                } else {
+                    usersRef.orderByChild("medicalCard").equalTo(medicalCard).addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                            if (dataSnapshot.exists()) {
+                                tilMedicalCard.setError("Medical card already registered");
+                            } else {
+                                createUserAccount();
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError databaseError) {
+                            showError("Database error");
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                showError("Database error");
+            }
+        });
     }
 
     private void createUserAccount() {
@@ -165,17 +279,38 @@ public class PatientFragment extends Fragment {
         if (userId != null) {
             usersRef.child(userId).setValue(user)
                     .addOnSuccessListener(aVoid -> {
+                        saveLoginState("user", firstName, lastName, userId);
                         Toast.makeText(getActivity(), "User account created successfully", Toast.LENGTH_SHORT).show();
-                        navigateToMainActivity();
+                        navigateToMainActivity("user", firstName, lastName, userId);
                     })
                     .addOnFailureListener(e -> showError("Failed to create user account"));
         }
     }
 
-    private void navigateToMainActivity() {
-        Intent intent = new Intent(getActivity(), MainActivity.class);
+    private void saveLoginState(String role, String firstName, String lastName, String userId) {
+        SharedPreferences prefs = getActivity().getSharedPreferences("LoginPrefs", getContext().MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean("isLoggedIn", true);
+        editor.putString("role", role);
+        editor.putString("firstName", firstName);
+        editor.putString("lastName", lastName);
+        editor.putString("userId", userId);
+        editor.apply();
+    }
+
+    private void navigateToMainActivity(String role, String firstName, String lastName, String userId) {
+        Intent intent;
+        if ("caretaker".equals(role)) {
+            intent = new Intent(getActivity(), CaretakerMonitorActivity.class);
+            intent.putExtra("caretakerName", firstName + " " + lastName);
+            intent.putExtra("caretakerId", userId);
+        } else {
+            intent = new Intent(getActivity(), MonitorActivity.class);
+            intent.putExtra("userName", firstName + " " + lastName);
+            intent.putExtra("userId", userId);
+        }
         startActivity(intent);
-        requireActivity().finish();
+        getActivity().finish();
     }
 
     private void showError(String message) {

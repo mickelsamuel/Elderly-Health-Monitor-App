@@ -32,4 +32,5 @@
     <string name="gender">Gender</string>
     <string name="emergency_contact">Emergency Contact</string>
     <string name="settings_button_description">Settings</string>
+    <string name="confirm_password">Confirm Password</string>
 </resources>

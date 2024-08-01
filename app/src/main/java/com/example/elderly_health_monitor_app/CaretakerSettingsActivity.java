@@ -10,6 +10,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -120,13 +121,13 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
                     String medicalCard = snapshot.child("medicalCard").getValue(String.class);
                     String userId = snapshot.child("id").getValue(String.class);
 
-                    // Set the text and hint for each field
-                    setField(editTextFirstName, tilFirstName, firstName);
-                    setField(editTextLastName, tilLastName, lastName);
-                    setField(editTextPhoneNumber, tilPhoneNumber, phoneNumber);
-                    setField(editTextLicense, tilLicense, license);
-                    setField(editTextMedicalCard, tilMedicalCard, medicalCard);
-                    setField(userIdText, userId); // Correct method for TextView
+                    // Set the text for each field
+                    setField(editTextFirstName, firstName);
+                    setField(editTextLastName, lastName);
+                    setField(editTextPhoneNumber, phoneNumber);
+                    setField(editTextLicense, license);
+                    setField(editTextMedicalCard, medicalCard);
+                    setField(userIdText, userId);
 
                     // Set text color to ensure visibility
                     int textColor = getResources().getColor(android.R.color.black);
@@ -151,6 +152,19 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
             }
         });
     }
+
+    private void setField(TextInputEditText field, String value) {
+        if (value != null && !value.isEmpty()) {
+            field.setText(value);
+        }
+    }
+
+    private void setField(TextView field, String value) {
+        if (value != null && !value.isEmpty()) {
+            field.setText(value);
+        }
+    }
+
 
     private void setupFontSizeAdjustment() {
         SharedPreferences prefs = getSharedPreferences("settings", MODE_PRIVATE);
@@ -314,51 +328,102 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         builder.setTitle("Delete Account");
         builder.setMessage("Are you sure you want to delete your account? This action cannot be undone.");
 
-        builder.setPositiveButton("Delete", (dialog, which) -> deleteAccount());
+        builder.setPositiveButton("Delete", (dialog, which) -> showDeleteAccountPasswordDialog());
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
 
         builder.show();
     }
 
-    private void deleteAccount() {
-        databaseRef.removeValue().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                Log.d(TAG, "Account deleted successfully");
-                Toast.makeText(CaretakerSettingsActivity.this, "Account deleted successfully", Toast.LENGTH_SHORT).show();
-                navigateToLogin(); // Navigate to login after deletion
-            } else {
-                Log.e(TAG, "Failed to delete account", task.getException());
-                Toast.makeText(CaretakerSettingsActivity.this, "Failed to delete account: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+    private void showDeleteAccountPasswordDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Confirm Password");
+
+        View viewInflated = LayoutInflater.from(this).inflate(R.layout.dialog_confirm_password, null);
+        inputCurrentPassword = viewInflated.findViewById(R.id.input_current_password);
+
+        builder.setView(viewInflated);
+
+        builder.setPositiveButton("Delete Account", (dialog, which) -> {
+            String currentPassword = inputCurrentPassword.getText().toString();
+            deleteAccount(currentPassword);
+        });
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
+
+        builder.show();
+    }
+
+    private void deleteAccount(String currentPassword) {
+        if (caretakerLicense == null || caretakerLicense.isEmpty()) {
+            Log.e(TAG, "No authenticated caretaker found.");
+            Toast.makeText(CaretakerSettingsActivity.this, "No authenticated caretaker found. Please log in again.", Toast.LENGTH_SHORT).show();
+            navigateToLogin();
+            return;
+        }
+
+        // Re-authenticate the caretaker manually by checking the current password
+        databaseRef.child("password").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                String storedPassword = dataSnapshot.getValue(String.class);
+                if (storedPassword != null && storedPassword.equals(currentPassword)) {
+                    // Delete caretaker data from the database
+                    databaseRef.removeValue().addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            Log.d(TAG, "Account deleted successfully");
+                            Toast.makeText(CaretakerSettingsActivity.this, "Account deleted successfully", Toast.LENGTH_SHORT).show();
+                            clearLoginPreferences();
+                            navigateToLogin(); // Navigate to login page
+                        } else {
+                            Log.e(TAG, "Failed to delete account", task.getException());
+                            Toast.makeText(CaretakerSettingsActivity.this, "Failed to delete account: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                } else {
+                    Log.e(TAG, "Authentication failed. Please check your current password.");
+                    Toast.makeText(CaretakerSettingsActivity.this, "Authentication failed. Please check your current password.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, "Failed to read password", databaseError.toException());
+                Toast.makeText(CaretakerSettingsActivity.this, "Failed to read password", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private void navigateToLogin() {
-        SharedPreferences prefs = getSharedPreferences("user_prefs", MODE_PRIVATE);
+    private void clearLoginPreferences() {
+        SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
-        editor.remove("caretaker_license");
+        editor.clear();
         editor.apply();
+    }
 
-        Intent intent = new Intent(CaretakerSettingsActivity.this, LoginActivity.class);
+    private void navigateToLogin() {
+        Log.d(TAG, "Navigating to LoginActivity");
+        Intent intent = new Intent(this, LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+        Log.d(TAG, "Finished navigating to LoginActivity");
     }
 
     private void setupLogout() {
-        buttonLogout.setOnClickListener(v -> logout());
+        buttonLogout.setOnClickListener(v -> showLogoutConfirmationDialog());
+    }
+
+    private void showLogoutConfirmationDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Confirm Logout")
+                .setMessage("Are you sure you want to logout?")
+                .setPositiveButton("Yes", (dialog, which) -> logout())
+                .setNegativeButton("No", null)
+                .show();
     }
 
     private void logout() {
-        SharedPreferences prefs = getSharedPreferences("user_prefs", MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.remove("caretaker_license");
-        editor.apply();
-
-        Intent intent = new Intent(CaretakerSettingsActivity.this, LoginActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
+        clearLoginPreferences();
+        navigateToLogin();
     }
 
     @Override
@@ -374,12 +439,6 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         if (value != null && !value.isEmpty()) {
             field.setText(value);
             layout.setHint(value); // Set the hint to the field value
-        }
-    }
-
-    private void setField(TextView field, String value) {
-        if (value != null && !value.isEmpty()) {
-            field.setText(value);
         }
     }
 }
