@@ -124,10 +124,14 @@ public class MonitorActivity extends AppCompatActivity {
                     Log.d(TAG, "refreshUserDetails: User details found - " + firstName + " " + lastName);
 
                     // Check for caretaker details
-                    if (dataSnapshot.child("caretakerName").exists() && dataSnapshot.child("caretakerId").exists()) {
+                    if (dataSnapshot.child("caretakerName").exists() && dataSnapshot.child("caretakerID").exists()) {
                         String caretakerName = dataSnapshot.child("caretakerName").getValue(String.class);
-                        String caretakerId = dataSnapshot.child("caretakerId").getValue(String.class);
-                        statusSummary.setText(String.format("Your caretaker is %s (%s)\n\n", caretakerName, caretakerId));
+                        String caretakerID = dataSnapshot.child("caretakerID").getValue(String.class);
+                        String caretakerPhoneNumber = dataSnapshot.child("caretakerPhoneNumber").getValue(String.class); // Retrieve phone number
+                        statusSummary.setText(String.format("Your caretaker is %s (%s)\n\n", caretakerName, caretakerID));
+
+                        // Update call button to use caretaker phone number
+                        callForHelpButton.setOnClickListener(v -> showOptionDialog());
                     } else {
                         statusSummary.setText("You do not have a caretaker registered yet.\n\n");
                     }

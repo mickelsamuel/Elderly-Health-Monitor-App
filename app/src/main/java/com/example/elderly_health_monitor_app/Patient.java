@@ -10,6 +10,21 @@ public class Patient {
     private int age;
     private String lastVisitDate;
     private String accelerometerReading;
+    private String caretakerID;
+    private String caretakerName;
+    private String caretakerPhoneNumber;
+    private String role;
+    private String lastName;          // New field
+    private String emergencyContact;  // New field
+    private String medicalCard;       // New field
+    private String firstName;         // New field
+    private String password;          // New field
+    private String phoneNumber;       // New field
+    private String id;                // New field
+
+    public Patient() {
+        // Default constructor required for calls to DataSnapshot.getValue(Patient.class)
+    }
 
     public Patient(String name, String dob, String patientID) {
         this.name = name;
@@ -21,18 +36,42 @@ public class Patient {
         this.age = 0;
         this.lastVisitDate = "";
         this.accelerometerReading = "";
+        this.caretakerID = "";
+        this.caretakerName = "";
+        this.caretakerPhoneNumber = "";
+        this.role = "user";
+        this.lastName = "";
+        this.emergencyContact = "";
+        this.medicalCard = "";
+        this.firstName = "";
+        this.password = "";
+        this.phoneNumber = "";
+        this.id = "";
     }
 
+    // Getters and setters for all fields
     public String getName() {
         return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getDob() {
         return dob;
     }
 
+    public void setDob(String dob) {
+        this.dob = dob;
+    }
+
     public String getPatientID() {
         return patientID;
+    }
+
+    public void setPatientID(String patientID) {
+        this.patientID = patientID;
     }
 
     public float getTemperature() {
@@ -96,6 +135,9 @@ public class Patient {
     }
 
     private double parseAccelerometerValue(int index) {
+        if (accelerometerReading == null || accelerometerReading.isEmpty()) {
+            return 0.0;
+        }
         String[] values = accelerometerReading.split(",");
         if (values.length > index) {
             try {
@@ -105,5 +147,93 @@ public class Patient {
             }
         }
         return 0.0;
+    }
+
+    public String getCaretakerID() {
+        return caretakerID;
+    }
+
+    public void setCaretakerID(String caretakerID) {
+        this.caretakerID = caretakerID;
+    }
+
+    public String getCaretakerName() {
+        return caretakerName;
+    }
+
+    public void setCaretakerName(String caretakerName) {
+        this.caretakerName = caretakerName;
+    }
+
+    public String getCaretakerPhoneNumber() {
+        return caretakerPhoneNumber;
+    }
+
+    public void setCaretakerPhoneNumber(String caretakerPhoneNumber) {
+        this.caretakerPhoneNumber = caretakerPhoneNumber;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getEmergencyContact() {
+        return emergencyContact;
+    }
+
+    public void setEmergencyContact(String emergencyContact) {
+        this.emergencyContact = emergencyContact;
+    }
+
+    public String getMedicalCard() {
+        return medicalCard;
+    }
+
+    public void setMedicalCard(String medicalCard) {
+        this.medicalCard = medicalCard;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 }

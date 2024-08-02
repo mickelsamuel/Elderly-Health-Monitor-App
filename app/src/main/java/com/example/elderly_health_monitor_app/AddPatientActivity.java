@@ -34,9 +34,8 @@ public class AddPatientActivity extends AppCompatActivity {
     private Button backButton;
     private DatabaseReference databaseRef;
     private String caretakerID;
-    private String caretakerFirstName;
-    private String caretakerLastName;
-    private String caretakerPhoneNumber;
+    private String caretakerName;
+    private String caretakerPhoneNumber; // Add caretaker phone number
 
     private static final String TAG = "AddPatientActivity";
 
@@ -54,13 +53,11 @@ public class AddPatientActivity extends AppCompatActivity {
 
         // Retrieve caretaker details from the intent
         caretakerID = getIntent().getStringExtra("caretakerID");
-        caretakerFirstName = getIntent().getStringExtra("caretakerFirstName");
-        caretakerLastName = getIntent().getStringExtra("caretakerLastName");
-        caretakerPhoneNumber = getIntent().getStringExtra("caretakerPhoneNumber");
+        caretakerName = getIntent().getStringExtra("caretakerName");
+        caretakerPhoneNumber = getIntent().getStringExtra("caretakerPhoneNumber"); // Retrieve phone number
 
         Log.d(TAG, "Caretaker ID: " + caretakerID);
-        Log.d(TAG, "Caretaker First Name: " + caretakerFirstName);
-        Log.d(TAG, "Caretaker Last Name: " + caretakerLastName);
+        Log.d(TAG, "Caretaker Name: " + caretakerName);
         Log.d(TAG, "Caretaker Phone Number: " + caretakerPhoneNumber);
 
         patientLastVisitDateInput.setOnClickListener(new View.OnClickListener() {
@@ -142,17 +139,22 @@ public class AddPatientActivity extends AppCompatActivity {
     }
 
     private void validateAndAddPatient(final String patientID, final String lastVisitDate) {
+        Log.d(TAG, "validateAndAddPatient: Patient ID: " + patientID + ", Last Visit Date: " + lastVisitDate);
+
         databaseRef.child(patientID).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists() && "user".equals(dataSnapshot.child("role").getValue(String.class))) {
+                    Log.d(TAG, "User exists and has role 'user'");
+
                     // Add caretaker details to the patient's data
                     Map<String, Object> patientUpdates = new HashMap<>();
                     patientUpdates.put("lastVisitDate", lastVisitDate);
                     patientUpdates.put("caretakerID", caretakerID);
-                    patientUpdates.put("caretakerFirstName", caretakerFirstName);
-                    patientUpdates.put("caretakerLastName", caretakerLastName);
-                    patientUpdates.put("caretakerPhoneNumber", caretakerPhoneNumber);
+                    patientUpdates.put("caretakerName", caretakerName);
+                    patientUpdates.put("caretakerPhoneNumber", caretakerPhoneNumber); // Add phone number
+
+                    Log.d(TAG, "Updating patient data: " + patientUpdates);
 
                     databaseRef.child(patientID).updateChildren(patientUpdates).addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
