@@ -25,8 +25,11 @@ import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.util.ArrayList;
@@ -44,6 +47,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
     private ArrayList<Patient> patients = new ArrayList<>();
     private boolean isAscending = true;
+    private DatabaseReference databaseRef;
 
     private static final String TAG = "CaretakerMonitorActivity";
     private static final String CHANNEL_ID = "patient_alerts_channel";
@@ -64,13 +68,12 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         Intent intent = getIntent();
         String caretakerName = intent.getStringExtra("caretakerName");
         String caretakerId = intent.getStringExtra("caretakerId");
-        String caretakerFirstName = intent.getStringExtra("caretakerFirstName");
-        String caretakerLastName = intent.getStringExtra("caretakerLastName");
-        String caretakerPhoneNumber = intent.getStringExtra("caretakerPhoneNumber");
 
         Log.d(TAG, "Caretaker details - Name: " + caretakerName + ", ID: " + caretakerId);
 
         userNameText.setText("Hello, " + caretakerName + "\n(" + caretakerId + ")");
+
+        databaseRef = FirebaseDatabase.getInstance().getReference("users");
 
         // Setup Spinner for sorting
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
@@ -83,9 +86,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Intent intent = new Intent(CaretakerMonitorActivity.this, AddPatientActivity.class);
                 intent.putExtra("caretakerID", caretakerId);
-                intent.putExtra("caretakerFirstName", caretakerFirstName);
-                intent.putExtra("caretakerLastName", caretakerLastName);
-                intent.putExtra("caretakerPhoneNumber", caretakerPhoneNumber);
+                intent.putExtra("caretakerName", caretakerName);
                 startActivityForResult(intent, 1);
             }
         });
@@ -136,6 +137,30 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         // Set initial font sizes based on preferences
         float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
         updateFontSize(fontSize);
+
+        // Load patients from Firebase
+        loadPatients(caretakerId);
+    }
+
+    private void loadPatients(String caretakerId) {
+        databaseRef.orderByChild("caretakerID").equalTo(caretakerId).addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                patients.clear();
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    Patient patient = snapshot.getValue(Patient.class);
+                    if (patient != null && "user".equals(patient.getRole())) {
+                        patients.add(patient);
+                    }
+                }
+                updatePatientCards();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, "Failed to load patients: " + databaseError.getMessage());
+            }
+        });
     }
 
     private void sortPatients(int position) {
@@ -220,11 +245,11 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
         DatabaseReference patientRef = FirebaseDatabase.getInstance().getReference("users").child(patient.getPatientID());
 
+        Log.d(TAG, "Removing caretaker information for patient: " + patient.getPatientID());
+
         // Remove caretaker information from patient's account in the database
         patientRef.child("caretakerID").removeValue();
-        patientRef.child("caretakerFirstName").removeValue();
-        patientRef.child("caretakerLastName").removeValue();
-        patientRef.child("caretakerPhoneNumber").removeValue();
+        patientRef.child("caretakerName").removeValue();
 
         // Remove patient from the local list and update the view
         patients.remove(patient);
@@ -243,6 +268,8 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             String gender = data.getStringExtra("gender");
             int age = data.getIntExtra("age", 0);
             String lastVisitDate = data.getStringExtra("lastVisitDate");
+
+            Log.d(TAG, "New patient added: " + name + " (" + patientID + ")");
 
             Patient newPatient = new Patient(name, dob, patientID);
             newPatient.setGender(gender);
