@@ -4,7 +4,7 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DIALOG" />
-        <DropdownSelection timestamp="2024-08-01T17:13:15.733788Z">
+        <DropdownSelection timestamp="2024-08-02T20:52:31.192914Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=/Users/mickelsamuel/.android/avd/Pixel_8_Pro_API_TiramisuPrivacySandbox.avd" />
@@ -15,12 +15,12 @@
           <targets>
             <Target type="DEFAULT_BOOT">
               <handle>
-                <DeviceId pluginId="LocalEmulator" identifier="path=/Users/mickelsamuel/.android/avd/Pixel_8_Pro_API_TiramisuPrivacySandbox.avd" />
+                <DeviceId pluginId="LocalEmulator" identifier="path=/Users/mickelsamuel/.android/avd/Medium_Phone_API_TiramisuPrivacySandbox.avd" />
               </handle>
             </Target>
             <Target type="DEFAULT_BOOT">
               <handle>
-                <DeviceId pluginId="LocalEmulator" identifier="path=/Users/mickelsamuel/.android/avd/Medium_Phone_API_TiramisuPrivacySandbox.avd" />
+                <DeviceId pluginId="LocalEmulator" identifier="path=/Users/mickelsamuel/.android/avd/Pixel_8_Pro_API_TiramisuPrivacySandbox.avd" />
               </handle>
             </Target>
           </targets>
