@@ -1,11 +1,15 @@
 package com.example.elderly_health_monitor_app;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -16,6 +20,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -95,6 +100,14 @@ public class SettingsActivity extends AppCompatActivity {
         buttonDeleteAccount = findViewById(R.id.buttonDeleteAccount);
 
         Log.d(TAG, "initializeViews: Using userId: " + currentUserId);
+
+        TextInputLayout tilUserId = findViewById(R.id.tilUserId);
+        tilUserId.setEndIconOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                copyUserIdToClipboard();
+            }
+        });
     }
 
     private void loadUserDetails() {
@@ -416,5 +429,13 @@ public class SettingsActivity extends AppCompatActivity {
         if (value != null && !value.isEmpty()) {
             field.setText(value);
         }
+    }
+
+    private void copyUserIdToClipboard() {
+        String userId = editTextUserId.getText().toString();
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("User ID", userId);
+        clipboard.setPrimaryClip(clip);
+        Toast.makeText(this, "User ID copied to clipboard", Toast.LENGTH_SHORT).show();
     }
 }

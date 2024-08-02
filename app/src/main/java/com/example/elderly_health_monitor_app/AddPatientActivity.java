@@ -7,13 +7,24 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
+import android.widget.Toast;
+
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AddPatientActivity extends AppCompatActivity {
 
@@ -21,6 +32,13 @@ public class AddPatientActivity extends AppCompatActivity {
     private EditText patientLastVisitDateInput;
     private Button savePatientButton;
     private Button backButton;
+    private DatabaseReference databaseRef;
+    private String caretakerID;
+    private String caretakerFirstName;
+    private String caretakerLastName;
+    private String caretakerPhoneNumber;
+
+    private static final String TAG = "AddPatientActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,6 +49,19 @@ public class AddPatientActivity extends AppCompatActivity {
         patientLastVisitDateInput = findViewById(R.id.patientLastVisitDateInput);
         savePatientButton = findViewById(R.id.savePatientButton);
         backButton = findViewById(R.id.backButton);
+
+        databaseRef = FirebaseDatabase.getInstance().getReference("users");
+
+        // Retrieve caretaker details from the intent
+        caretakerID = getIntent().getStringExtra("caretakerID");
+        caretakerFirstName = getIntent().getStringExtra("caretakerFirstName");
+        caretakerLastName = getIntent().getStringExtra("caretakerLastName");
+        caretakerPhoneNumber = getIntent().getStringExtra("caretakerPhoneNumber");
+
+        Log.d(TAG, "Caretaker ID: " + caretakerID);
+        Log.d(TAG, "Caretaker First Name: " + caretakerFirstName);
+        Log.d(TAG, "Caretaker Last Name: " + caretakerLastName);
+        Log.d(TAG, "Caretaker Phone Number: " + caretakerPhoneNumber);
 
         patientLastVisitDateInput.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -45,11 +76,17 @@ public class AddPatientActivity extends AppCompatActivity {
                 String patientID = patientIDInput.getText().toString();
                 String lastVisitDate = patientLastVisitDateInput.getText().toString();
 
-                Intent resultIntent = new Intent();
-                resultIntent.putExtra("patientID", patientID);
-                resultIntent.putExtra("lastVisitDate", lastVisitDate);
-                setResult(RESULT_OK, resultIntent);
-                finish();
+                if (TextUtils.isEmpty(patientID)) {
+                    Toast.makeText(AddPatientActivity.this, "Patient ID is required", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                if (TextUtils.isEmpty(lastVisitDate)) {
+                    Toast.makeText(AddPatientActivity.this, "Last Visit Date is required", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                validateAndAddPatient(patientID, lastVisitDate);
             }
         });
 
@@ -102,6 +139,46 @@ public class AddPatientActivity extends AppCompatActivity {
         );
 
         datePickerDialog.show();
+    }
+
+    private void validateAndAddPatient(final String patientID, final String lastVisitDate) {
+        databaseRef.child(patientID).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists() && "user".equals(dataSnapshot.child("role").getValue(String.class))) {
+                    // Add caretaker details to the patient's data
+                    Map<String, Object> patientUpdates = new HashMap<>();
+                    patientUpdates.put("lastVisitDate", lastVisitDate);
+                    patientUpdates.put("caretakerID", caretakerID);
+                    patientUpdates.put("caretakerFirstName", caretakerFirstName);
+                    patientUpdates.put("caretakerLastName", caretakerLastName);
+                    patientUpdates.put("caretakerPhoneNumber", caretakerPhoneNumber);
+
+                    databaseRef.child(patientID).updateChildren(patientUpdates).addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            Log.d(TAG, "Patient details updated successfully.");
+                            Intent resultIntent = new Intent();
+                            resultIntent.putExtra("patientID", patientID);
+                            resultIntent.putExtra("lastVisitDate", lastVisitDate);
+                            setResult(RESULT_OK, resultIntent);
+                            finish();
+                        } else {
+                            Log.e(TAG, "Failed to update patient details: " + task.getException().getMessage());
+                            Toast.makeText(AddPatientActivity.this, "Failed to add patient", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                } else {
+                    Log.e(TAG, "Invalid patient ID or user role");
+                    Toast.makeText(AddPatientActivity.this, "Invalid patient ID or user role", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, "Database error: " + databaseError.getMessage());
+                Toast.makeText(AddPatientActivity.this, "Database error: " + databaseError.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private class FontSizeUpdateReceiver extends BroadcastReceiver {

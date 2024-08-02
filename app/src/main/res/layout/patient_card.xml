@@ -38,5 +38,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Accelerometer: X: 0.1, Y: 0.2, Z: 9.8" />
+        <Button
+            android:id="@+id/removePatientButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="REMOVE" />
     </LinearLayout>
 </androidx.cardview.widget.CardView>

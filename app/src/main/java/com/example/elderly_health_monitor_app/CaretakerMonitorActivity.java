@@ -1,5 +1,6 @@
 package com.example.elderly_health_monitor_app;
 
+import androidx.appcompat.app.AppCompatActivity;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -20,10 +21,12 @@ import android.widget.GridLayout;
 import android.widget.ImageButton;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.util.ArrayList;
@@ -61,6 +64,9 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         Intent intent = getIntent();
         String caretakerName = intent.getStringExtra("caretakerName");
         String caretakerId = intent.getStringExtra("caretakerId");
+        String caretakerFirstName = intent.getStringExtra("caretakerFirstName");
+        String caretakerLastName = intent.getStringExtra("caretakerLastName");
+        String caretakerPhoneNumber = intent.getStringExtra("caretakerPhoneNumber");
 
         Log.d(TAG, "Caretaker details - Name: " + caretakerName + ", ID: " + caretakerId);
 
@@ -76,6 +82,10 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(CaretakerMonitorActivity.this, AddPatientActivity.class);
+                intent.putExtra("caretakerID", caretakerId);
+                intent.putExtra("caretakerFirstName", caretakerFirstName);
+                intent.putExtra("caretakerLastName", caretakerLastName);
+                intent.putExtra("caretakerPhoneNumber", caretakerPhoneNumber);
                 startActivityForResult(intent, 1);
             }
         });
@@ -180,6 +190,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             TextView patientHeartRateText = patientCardView.findViewById(R.id.patientHeartRateText);
             TextView patientTemperatureText = patientCardView.findViewById(R.id.patientTemperatureText);
             TextView patientAccelerometerText = patientCardView.findViewById(R.id.patientAccelerometerText);
+            Button removePatientButton = patientCardView.findViewById(R.id.removePatientButton);
 
             patientNameTextView.setText(patient.getName());
             patientIDTextView.setText(patient.getPatientID());
@@ -195,8 +206,31 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             patientTemperatureText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
             patientAccelerometerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
 
+            // Handle remove button click
+            removePatientButton.setOnClickListener(v -> {
+                removePatient(patient);
+            });
+
             patientGridLayout.addView(patientCardView);
         }
+    }
+
+    private void removePatient(Patient patient) {
+        String caretakerId = getIntent().getStringExtra("caretakerId");
+
+        DatabaseReference patientRef = FirebaseDatabase.getInstance().getReference("users").child(patient.getPatientID());
+
+        // Remove caretaker information from patient's account in the database
+        patientRef.child("caretakerID").removeValue();
+        patientRef.child("caretakerFirstName").removeValue();
+        patientRef.child("caretakerLastName").removeValue();
+        patientRef.child("caretakerPhoneNumber").removeValue();
+
+        // Remove patient from the local list and update the view
+        patients.remove(patient);
+        updatePatientCards();
+
+        Toast.makeText(this, "Patient removed successfully", Toast.LENGTH_SHORT).show();
     }
 
     @Override

@@ -148,7 +148,10 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
             android:hint="User ID"
-            app:startIconDrawable="@drawable/ic_person">
+            app:startIconDrawable="@drawable/ic_person"
+            app:endIconMode="custom"
+            app:endIconDrawable="@drawable/baseline_content_copy_24"
+            app:endIconContentDescription="Copy User ID">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editTextUserId"
