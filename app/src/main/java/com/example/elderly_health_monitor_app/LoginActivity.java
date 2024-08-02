@@ -99,7 +99,10 @@ public class LoginActivity extends AppCompatActivity {
         String role = userSnapshot.child("role").getValue(String.class);
         String firstName = userSnapshot.child("firstName").getValue(String.class);
         String lastName = userSnapshot.child("lastName").getValue(String.class);
+        String phoneNumber = userSnapshot.child("phoneNumber").getValue(String.class); // Retrieve phone number
         String userId = userSnapshot.getKey();
+
+        Log.d(TAG, "handleSuccessfulLogin: role=" + role + ", firstName=" + firstName + ", lastName=" + lastName + ", phoneNumber=" + phoneNumber + ", userId=" + userId);
 
         SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
@@ -108,10 +111,11 @@ public class LoginActivity extends AppCompatActivity {
         editor.putString("firstName", firstName);
         editor.putString("lastName", lastName);
         editor.putString("userId", userId);
+        editor.putString("phoneNumber", phoneNumber); // Save phone number
         editor.apply();
 
         if ("caretaker".equals(role)) {
-            startCaretakerActivity(firstName, lastName, userId);
+            startCaretakerActivity(firstName, lastName, userId, phoneNumber);
         } else if ("user".equals(role)) {
             startUserActivity(firstName, lastName, userId);
         } else {
@@ -119,20 +123,29 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
-        private void clearLoginPreferences() {
-            SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
-            SharedPreferences.Editor editor = prefs.edit();
-            editor.clear();
-            editor.apply();
-        }
+    private void startCaretakerActivity(String firstName, String lastName, String userId, String phoneNumber) {
+        Log.d(TAG, "startCaretakerActivity: firstName=" + firstName + ", lastName=" + lastName + ", userId=" + userId + ", phoneNumber=" + phoneNumber);
+        Intent intent = new Intent(this, CaretakerMonitorActivity.class);
+        intent.putExtra("caretakerName", firstName + " " + lastName);
+        intent.putExtra("caretakerId", userId);
+        intent.putExtra("caretakerPhoneNumber", phoneNumber); // Pass phone number
+        startActivity(intent);
+        finish();
+    }
 
-        private void navigateToLogin() {
-            clearLoginPreferences();
-            Intent intent = new Intent(this, LoginActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-        }
+    private void clearLoginPreferences() {
+        SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.clear();
+        editor.apply();
+    }
 
+    private void navigateToLogin() {
+        clearLoginPreferences();
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+    }
 
     private void saveLoginState(String role, String firstName, String lastName, String userId) {
         SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
@@ -146,21 +159,16 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void navigateToActivity(String role, String firstName, String lastName, String userId) {
+        SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
+        String phoneNumber = prefs.getString("phoneNumber", "");
+
         if ("caretaker".equals(role)) {
-            startCaretakerActivity(firstName, lastName, userId);
+            startCaretakerActivity(firstName, lastName, userId, phoneNumber);
         } else if ("user".equals(role)) {
             startUserActivity(firstName, lastName, userId);
         } else {
             Toast.makeText(this, "Access denied: Invalid role", Toast.LENGTH_SHORT).show();
         }
-    }
-
-    private void startCaretakerActivity(String firstName, String lastName, String userId) {
-        Intent intent = new Intent(this, CaretakerMonitorActivity.class);
-        intent.putExtra("caretakerName", firstName + " " + lastName);
-        intent.putExtra("caretakerId", userId);
-        startActivity(intent);
-        finish();
     }
 
     private void startUserActivity(String firstName, String lastName, String userId) {

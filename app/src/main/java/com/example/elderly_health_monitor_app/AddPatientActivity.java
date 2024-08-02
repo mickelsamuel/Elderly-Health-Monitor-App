@@ -54,7 +54,9 @@ public class AddPatientActivity extends AppCompatActivity {
         // Retrieve caretaker details from the intent
         caretakerID = getIntent().getStringExtra("caretakerID");
         caretakerName = getIntent().getStringExtra("caretakerName");
-        caretakerPhoneNumber = getIntent().getStringExtra("caretakerPhoneNumber"); // Retrieve phone number
+        caretakerPhoneNumber = getIntent().getStringExtra("caretakerPhoneNumber");
+
+        Log.d(TAG, "onCreate: Caretaker details - ID: " + caretakerID + ", Name: " + caretakerName + ", Phone: " + caretakerPhoneNumber);
 
         Log.d(TAG, "Caretaker ID: " + caretakerID);
         Log.d(TAG, "Caretaker Name: " + caretakerName);
@@ -139,7 +141,7 @@ public class AddPatientActivity extends AppCompatActivity {
     }
 
     private void validateAndAddPatient(final String patientID, final String lastVisitDate) {
-        Log.d(TAG, "validateAndAddPatient: Patient ID: " + patientID + ", Last Visit Date: " + lastVisitDate);
+        Log.d(TAG, "validateAndAddPatient: Patient ID: " + patientID + ", Last Visit Date: " + lastVisitDate + ", Caretaker ID: " + caretakerID + ", Caretaker Name: " + caretakerName + ", Caretaker Phone Number: " + caretakerPhoneNumber);
 
         databaseRef.child(patientID).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -152,21 +154,26 @@ public class AddPatientActivity extends AppCompatActivity {
                     patientUpdates.put("lastVisitDate", lastVisitDate);
                     patientUpdates.put("caretakerID", caretakerID);
                     patientUpdates.put("caretakerName", caretakerName);
-                    patientUpdates.put("caretakerPhoneNumber", caretakerPhoneNumber); // Add phone number
+                    patientUpdates.put("caretakerPhoneNumber", caretakerPhoneNumber);
 
                     Log.d(TAG, "Updating patient data: " + patientUpdates);
 
                     databaseRef.child(patientID).updateChildren(patientUpdates).addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
                             Log.d(TAG, "Patient details updated successfully.");
+                            Toast.makeText(AddPatientActivity.this, "Patient details updated successfully", Toast.LENGTH_SHORT).show();
                             Intent resultIntent = new Intent();
                             resultIntent.putExtra("patientID", patientID);
                             resultIntent.putExtra("lastVisitDate", lastVisitDate);
+                            resultIntent.putExtra("name", dataSnapshot.child("firstName").getValue(String.class) + " " + dataSnapshot.child("lastName").getValue(String.class));
+                            resultIntent.putExtra("dob", dataSnapshot.child("dob").getValue(String.class));
+                            resultIntent.putExtra("gender", dataSnapshot.child("gender").getValue(String.class));
+                            resultIntent.putExtra("age", dataSnapshot.child("age").getValue(Integer.class));
                             setResult(RESULT_OK, resultIntent);
                             finish();
                         } else {
                             Log.e(TAG, "Failed to update patient details: " + task.getException().getMessage());
-                            Toast.makeText(AddPatientActivity.this, "Failed to add patient", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(AddPatientActivity.this, "Failed to update patient details", Toast.LENGTH_SHORT).show();
                         }
                     });
                 } else {

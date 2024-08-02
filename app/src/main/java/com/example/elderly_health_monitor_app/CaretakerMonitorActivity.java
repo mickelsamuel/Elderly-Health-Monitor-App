@@ -1,15 +1,9 @@
 package com.example.elderly_health_monitor_app;
 
-import androidx.appcompat.app.AppCompatActivity;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
@@ -17,13 +11,14 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.GridLayout;
 import android.widget.ImageButton;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.core.app.NotificationCompat;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -44,6 +39,8 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
     private Spinner sortSpinner;
     private Button toggleSortOrderButton;
     private ImageButton settingsButton;
+    private RecyclerView patientRecyclerView;
+    private PatientAdapter patientAdapter;
 
     private ArrayList<Patient> patients = new ArrayList<>();
     private boolean isAscending = true;
@@ -51,6 +48,8 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
     private static final String TAG = "CaretakerMonitorActivity";
     private static final String CHANNEL_ID = "patient_alerts_channel";
+
+    private String caretakerPhoneNumber;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,13 +62,20 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         sortSpinner = findViewById(R.id.sortSpinner);
         toggleSortOrderButton = findViewById(R.id.toggleSortOrderButton);
         settingsButton = findViewById(R.id.settingsButton);
+        patientRecyclerView = findViewById(R.id.patientRecyclerView);
+
+        // Setup RecyclerView
+        patientRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        patientAdapter = new PatientAdapter(this, patients, patient -> removePatient(patient));
+        patientRecyclerView.setAdapter(patientAdapter);
 
         // Retrieve caretaker details from intent
         Intent intent = getIntent();
         String caretakerName = intent.getStringExtra("caretakerName");
         String caretakerId = intent.getStringExtra("caretakerId");
+        caretakerPhoneNumber = intent.getStringExtra("caretakerPhoneNumber");
 
-        Log.d(TAG, "Caretaker details - Name: " + caretakerName + ", ID: " + caretakerId);
+        Log.d(TAG, "onCreate: Caretaker details - Name: " + caretakerName + ", ID: " + caretakerId + ", Phone: " + caretakerPhoneNumber);
 
         userNameText.setText("Hello, " + caretakerName + "\n(" + caretakerId + ")");
 
@@ -81,14 +87,14 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         sortSpinner.setAdapter(adapter);
 
-        addPatientButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(CaretakerMonitorActivity.this, AddPatientActivity.class);
-                intent.putExtra("caretakerID", caretakerId);
-                intent.putExtra("caretakerName", caretakerName);
-                startActivityForResult(intent, 1);
-            }
+        // When starting AddPatientActivity, pass the caretaker's phone number
+        addPatientButton.setOnClickListener(v -> {
+            Log.d(TAG, "addPatientButton onClick: caretakerId=" + caretakerId + ", caretakerName=" + caretakerName + ", caretakerPhoneNumber=" + caretakerPhoneNumber);
+            Intent intent1 = new Intent(CaretakerMonitorActivity.this, AddPatientActivity.class);
+            intent1.putExtra("caretakerID", caretakerId);
+            intent1.putExtra("caretakerName", caretakerName);
+            intent1.putExtra("caretakerPhoneNumber", caretakerPhoneNumber); // Pass phone number
+            startActivityForResult(intent1, 1);
         });
 
         // Handle sorting selection
@@ -105,23 +111,17 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         });
 
         // Toggle sorting order
-        toggleSortOrderButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                isAscending = !isAscending;
-                int selectedPosition = sortSpinner.getSelectedItemPosition();
-                sortPatients(selectedPosition);
-            }
+        toggleSortOrderButton.setOnClickListener(v -> {
+            isAscending = !isAscending;
+            int selectedPosition = sortSpinner.getSelectedItemPosition();
+            sortPatients(selectedPosition);
         });
 
         // Handle settings button click
-        settingsButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent settingsIntent = new Intent(CaretakerMonitorActivity.this, CaretakerSettingsActivity.class);
-                settingsIntent.putExtra("caretakerLicense", caretakerId);
-                startActivity(settingsIntent);
-            }
+        settingsButton.setOnClickListener(v -> {
+            Intent settingsIntent = new Intent(CaretakerMonitorActivity.this, CaretakerSettingsActivity.class);
+            settingsIntent.putExtra("caretakerLicense", caretakerId);
+            startActivity(settingsIntent);
         });
 
         FirebaseMessaging.getInstance().subscribeToTopic(caretakerId)
@@ -129,8 +129,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
                     String msg = task.isSuccessful() ? "Subscribed to patient alerts" : "Subscription failed";
                     Log.d(TAG, msg);
                 });
-
-        createNotificationChannel();
 
         registerReceiver(new FontSizeUpdateReceiver(), new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE"));
 
@@ -150,10 +148,11 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
                 for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
                     Patient patient = snapshot.getValue(Patient.class);
                     if (patient != null && "user".equals(patient.getRole())) {
+                        // Add patient to the list
                         patients.add(patient);
                     }
                 }
-                updatePatientCards();
+                patientAdapter.notifyDataSetChanged();
             }
 
             @Override
@@ -200,60 +199,68 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         }
 
         Collections.sort(patients, comparator);
-        updatePatientCards();
-    }
-
-    private void updatePatientCards() {
-        GridLayout patientGridLayout = findViewById(R.id.patientGridLayout); // Assuming you have an ID for your GridLayout
-        patientGridLayout.removeAllViews();
-
-        for (Patient patient : patients) {
-            View patientCardView = getLayoutInflater().inflate(R.layout.patient_card, null);
-
-            TextView patientNameTextView = patientCardView.findViewById(R.id.patientNameTextView);
-            TextView patientIDTextView = patientCardView.findViewById(R.id.patientIDTextView);
-            TextView patientHeartRateText = patientCardView.findViewById(R.id.patientHeartRateText);
-            TextView patientTemperatureText = patientCardView.findViewById(R.id.patientTemperatureText);
-            TextView patientAccelerometerText = patientCardView.findViewById(R.id.patientAccelerometerText);
-            Button removePatientButton = patientCardView.findViewById(R.id.removePatientButton);
-
-            patientNameTextView.setText(patient.getName());
-            patientIDTextView.setText(patient.getPatientID());
-            patientHeartRateText.setText("Heart Rate: " + patient.getHeartRate());
-            patientTemperatureText.setText("Temperature: " + patient.getTemperature() + "°C");
-            patientAccelerometerText.setText("Accelerometer: X: " + patient.getAccelerometerX() + ", Y: " + patient.getAccelerometerY() + ", Z: " + patient.getAccelerometerZ());
-
-            // Set the text size
-            float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
-            patientNameTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-            patientIDTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-            patientHeartRateText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-            patientTemperatureText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-            patientAccelerometerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-
-            // Handle remove button click
-            removePatientButton.setOnClickListener(v -> {
-                removePatient(patient);
-            });
-
-            patientGridLayout.addView(patientCardView);
-        }
+        patientAdapter.notifyDataSetChanged();
     }
 
     private void removePatient(Patient patient) {
+        if (patient == null) {
+            Log.e(TAG, "removePatient: Patient object is null");
+            return;
+        }
+
         String caretakerId = getIntent().getStringExtra("caretakerId");
+        if (caretakerId == null) {
+            Log.e(TAG, "removePatient: Caretaker ID is null");
+            return;
+        }
 
-        DatabaseReference patientRef = FirebaseDatabase.getInstance().getReference("users").child(patient.getPatientID());
+        String patientID = patient.getPatientID();
+        if (patientID == null) {
+            Log.e(TAG, "removePatient: Patient ID is null");
+            return;
+        }
 
-        Log.d(TAG, "Removing caretaker information for patient: " + patient.getPatientID());
+        DatabaseReference patientRef = FirebaseDatabase.getInstance().getReference("users").child(patientID);
+        if (patientRef == null) {
+            Log.e(TAG, "removePatient: Failed to get DatabaseReference for patient ID: " + patientID);
+            return;
+        }
+
+        Log.d(TAG, "Removing caretaker information for patient: " + patientID);
 
         // Remove caretaker information from patient's account in the database
-        patientRef.child("caretakerID").removeValue();
-        patientRef.child("caretakerName").removeValue();
+        patientRef.child("caretakerID").removeValue().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                Log.d(TAG, "Successfully removed caretakerID");
+            } else {
+                Log.e(TAG, "Failed to remove caretakerID", task.getException());
+            }
+        });
+        patientRef.child("caretakerName").removeValue().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                Log.d(TAG, "Successfully removed caretakerName");
+            } else {
+                Log.e(TAG, "Failed to remove caretakerName", task.getException());
+            }
+        });
+        patientRef.child("caretakerPhoneNumber").removeValue().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                Log.d(TAG, "Successfully removed caretakerPhoneNumber");
+            } else {
+                Log.e(TAG, "Failed to remove caretakerPhoneNumber", task.getException());
+            }
+        });
+        patientRef.child("lastVisitDate").removeValue().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                Log.d(TAG, "Successfully removed lastVisitDate");
+            } else {
+                Log.e(TAG, "Failed to remove lastVisitDate", task.getException());
+            }
+        });
 
         // Remove patient from the local list and update the view
         patients.remove(patient);
-        updatePatientCards();
+        patientAdapter.notifyDataSetChanged();
 
         Toast.makeText(this, "Patient removed successfully", Toast.LENGTH_SHORT).show();
     }
@@ -276,43 +283,8 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             newPatient.setAge(age);
             newPatient.setLastVisitDate(lastVisitDate);
             patients.add(newPatient);
-            updatePatientCards();
+            patientAdapter.notifyDataSetChanged();
         }
-    }
-
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    CHANNEL_ID,
-                    "Patient Alerts",
-                    NotificationManager.IMPORTANCE_HIGH
-            );
-            channel.setDescription("Notifications for patient alerts");
-
-            NotificationManager notificationManager = getSystemService(NotificationManager.class);
-            notificationManager.createNotificationChannel(channel);
-        }
-    }
-
-    public void handleIncomingNotification(String title, String message) {
-        Intent intent = new Intent(this, CaretakerMonitorActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_MUTABLE);
-
-        Uri defaultSoundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION);
-        NotificationCompat.Builder notificationBuilder =
-                new NotificationCompat.Builder(this, CHANNEL_ID)
-                        .setSmallIcon(R.drawable.ic_notification)
-                        .setContentTitle(title)
-                        .setContentText(message)
-                        .setAutoCancel(true)
-                        .setSound(defaultSoundUri)
-                        .setContentIntent(pendingIntent);
-
-        NotificationManager notificationManager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-
-        notificationManager.notify(0, notificationBuilder.build());
     }
 
     @Override
@@ -341,10 +313,8 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
     }
 
     private void updatePatientCardsFontSize(float fontSize) {
-        GridLayout patientGridLayout = findViewById(R.id.patientGridLayout); // Assuming you have an ID for your GridLayout
-
-        for (int i = 0; i < patientGridLayout.getChildCount(); i++) {
-            View patientCardView = patientGridLayout.getChildAt(i);
+        for (int i = 0; i < patientRecyclerView.getChildCount(); i++) {
+            View patientCardView = patientRecyclerView.getChildAt(i);
 
             TextView patientNameTextView = patientCardView.findViewById(R.id.patientNameTextView);
             TextView patientIDTextView = patientCardView.findViewById(R.id.patientIDTextView);
