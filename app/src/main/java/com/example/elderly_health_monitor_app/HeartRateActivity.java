@@ -38,7 +38,6 @@ public class HeartRateActivity extends AppCompatActivity {
 
     private FirebaseDatabase firebaseDatabase;
     private DatabaseReference heartRateRef;
-    private DatabaseReference usersRef;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,7 +83,6 @@ public class HeartRateActivity extends AppCompatActivity {
         // Initialize Firebase Database references
         firebaseDatabase = FirebaseDatabase.getInstance();
         heartRateRef = firebaseDatabase.getReference("heartRateValues");
-        usersRef = firebaseDatabase.getReference("users");
 
         // Read heart rate values from the database
         heartRateRef.addValueEventListener(new ValueEventListener() {
@@ -93,22 +91,21 @@ public class HeartRateActivity extends AppCompatActivity {
                 heartRateList.clear();
                 ArrayList<DataPoint> dataPoints = new ArrayList<>();
                 for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
-                    String userId = snapshot.child("id").getValue(String.class);
                     Long heartVal = snapshot.child("heartVal").getValue(Long.class);
                     Long heartTime = snapshot.child("heartTime").getValue(Long.class);
 
-                    Log.d(TAG, "Fetched data - ID: " + userId + ", HeartVal: " + heartVal + ", HeartTime: " + heartTime);
+                    Log.d(TAG, "Fetched data - HeartVal: " + heartVal + ", HeartTime: " + heartTime);
 
-                    if (userId != null && heartVal != null && heartTime != null) {
+                    if (heartVal != null && heartTime != null) {
                         if (heartTime >= sevenDaysAgo && heartTime <= now) {
-                            Log.d(TAG, "Valid data for last 7 days - ID: " + userId + ", HeartVal: " + heartVal + ", HeartTime: " + heartTime);
-                            fetchUserNameAndAddToList(userId, heartVal, heartTime);
+                            Log.d(TAG, "Valid data for last 7 days - HeartVal: " + heartVal + ", HeartTime: " + heartTime);
+                            addDataToList(heartVal, heartTime);
                             dataPoints.add(new DataPoint(new Date(heartTime), heartVal));
                         } else {
-                            Log.d(TAG, "Data not within last 7 days - ID: " + userId + ", HeartVal: " + heartVal + ", HeartTime: " + heartTime);
+                            Log.d(TAG, "Data not within last 7 days - HeartVal: " + heartVal + ", HeartTime: " + heartTime);
                         }
                     } else {
-                        Log.e(TAG, "Invalid data - ID: " + userId + ", HeartVal: " + heartVal + ", HeartTime: " + heartTime);
+                        Log.e(TAG, "Invalid data - HeartVal: " + heartVal + ", HeartTime: " + heartTime);
                     }
                 }
 
@@ -132,36 +129,12 @@ public class HeartRateActivity extends AppCompatActivity {
         });
     }
 
-    private void fetchUserNameAndAddToList(final String userId, final Long heartVal, final Long heartTime) {
-        usersRef.orderByChild("id").equalTo(userId).addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot userSnapshot) {
-                if (userSnapshot.exists()) {
-                    for (DataSnapshot user : userSnapshot.getChildren()) {
-                        String firstName = user.child("firstName").getValue(String.class);
-                        String lastName = user.child("lastName").getValue(String.class);
-                        if (firstName != null && lastName != null) {
-                            String userName = firstName + " " + lastName;
-                            String formattedTime = convertTimestampToReadableDate(heartTime);
-                            String displayText = "Name: " + userName + ", Heart Value: " + heartVal + ", Time: " + formattedTime;
-                            heartRateList.add(displayText);
-                            adapter.notifyDataSetChanged();
-                            Log.d(TAG, "User found and added to list: " + displayText);
-                        } else {
-                            Log.e(TAG, "First name or last name is null for user ID: " + userId);
-                        }
-                    }
-                } else {
-                    Log.e(TAG, "No user found for ID: " + userId);
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError databaseError) {
-                // Handle possible errors.
-                Log.e(TAG, "Error fetching user data", databaseError.toException());
-            }
-        });
+    private void addDataToList(final Long heartVal, final Long heartTime) {
+        String formattedTime = convertTimestampToReadableDate(heartTime);
+        String displayText = String.format("Heart Rate: %d bpm, Time: %s", heartVal, formattedTime);
+        heartRateList.add(displayText);
+        adapter.notifyDataSetChanged();
+        Log.d(TAG, "Data added to list: " + displayText);
     }
 
     private String convertTimestampToReadableDate(Long timestamp) {

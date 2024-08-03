@@ -65,6 +65,9 @@
         <activity
             android:name=".TemperatureActivity"
             android:exported="false" /> <!-- Firebase Messaging Service -->
+        <activity
+            android:name=".AccelerometerActivity"
+            android:exported="false" />
         <service
             android:name=".MyFirebaseMessagingService"
             android:exported="true">
@@ -72,6 +75,13 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+        <receiver
+            android:name=".MonitorActivity$FontSizeUpdateReceiver"
+            android:exported="true"> <!-- or android:exported="false" based on your requirement -->
+            <intent-filter>
+                <action android:name="com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE" />
+            </intent-filter>
+        </receiver>
     </application>
 
 

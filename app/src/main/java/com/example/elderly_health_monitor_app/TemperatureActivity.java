@@ -38,7 +38,6 @@ public class TemperatureActivity extends AppCompatActivity {
 
     private FirebaseDatabase firebaseDatabase;
     private DatabaseReference temperatureRef;
-    private DatabaseReference usersRef;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,7 +83,6 @@ public class TemperatureActivity extends AppCompatActivity {
         // Initialize Firebase Database references
         firebaseDatabase = FirebaseDatabase.getInstance();
         temperatureRef = firebaseDatabase.getReference("temperatureValues");
-        usersRef = firebaseDatabase.getReference("users");
 
         // Read temperature values from the database
         temperatureRef.addValueEventListener(new ValueEventListener() {
@@ -93,22 +91,21 @@ public class TemperatureActivity extends AppCompatActivity {
                 temperatureList.clear();
                 ArrayList<DataPoint> dataPoints = new ArrayList<>();
                 for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
-                    String userId = snapshot.child("id").getValue(String.class);
                     Double temperatureVal = snapshot.child("temperatureVal").getValue(Double.class);
                     Long temperatureTime = snapshot.child("temperatureTime").getValue(Long.class);
 
-                    Log.d(TAG, "Fetched data - ID: " + userId + ", TemperatureVal: " + temperatureVal + ", TemperatureTime: " + temperatureTime);
+                    Log.d(TAG, "Fetched data - TemperatureVal: " + temperatureVal + ", TemperatureTime: " + temperatureTime);
 
-                    if (userId != null && temperatureVal != null && temperatureTime != null) {
+                    if (temperatureVal != null && temperatureTime != null) {
                         if (temperatureTime >= sevenDaysAgo && temperatureTime <= now) {
-                            Log.d(TAG, "Valid data for last 7 days - ID: " + userId + ", TemperatureVal: " + temperatureVal + ", TemperatureTime: " + temperatureTime);
-                            fetchUserNameAndAddToList(userId, temperatureVal, temperatureTime);
+                            Log.d(TAG, "Valid data for last 7 days - TemperatureVal: " + temperatureVal + ", TemperatureTime: " + temperatureTime);
+                            addDataToList(temperatureVal, temperatureTime);
                             dataPoints.add(new DataPoint(new Date(temperatureTime), temperatureVal));
                         } else {
-                            Log.d(TAG, "Data not within last 7 days - ID: " + userId + ", TemperatureVal: " + temperatureVal + ", TemperatureTime: " + temperatureTime);
+                            Log.d(TAG, "Data not within last 7 days - TemperatureVal: " + temperatureVal + ", TemperatureTime: " + temperatureTime);
                         }
                     } else {
-                        Log.e(TAG, "Invalid data - ID: " + userId + ", TemperatureVal: " + temperatureVal + ", TemperatureTime: " + temperatureTime);
+                        Log.e(TAG, "Invalid data - TemperatureVal: " + temperatureVal + ", TemperatureTime: " + temperatureTime);
                     }
                 }
 
@@ -132,36 +129,12 @@ public class TemperatureActivity extends AppCompatActivity {
         });
     }
 
-    private void fetchUserNameAndAddToList(final String userId, final Double temperatureVal, final Long temperatureTime) {
-        usersRef.orderByChild("id").equalTo(userId).addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot userSnapshot) {
-                if (userSnapshot.exists()) {
-                    for (DataSnapshot user : userSnapshot.getChildren()) {
-                        String firstName = user.child("firstName").getValue(String.class);
-                        String lastName = user.child("lastName").getValue(String.class);
-                        if (firstName != null && lastName != null) {
-                            String userName = firstName + " " + lastName;
-                            String formattedTime = convertTimestampToReadableDate(temperatureTime);
-                            String displayText = "Name: " + userName + ", Temperature: " + temperatureVal + "°C, Time: " + formattedTime;
-                            temperatureList.add(displayText);
-                            adapter.notifyDataSetChanged();
-                            Log.d(TAG, "User found and added to list: " + displayText);
-                        } else {
-                            Log.e(TAG, "First name or last name is null for user ID: " + userId);
-                        }
-                    }
-                } else {
-                    Log.e(TAG, "No user found for ID: " + userId);
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError databaseError) {
-                // Handle possible errors.
-                Log.e(TAG, "Error fetching user data", databaseError.toException());
-            }
-        });
+    private void addDataToList(final Double temperatureVal, final Long temperatureTime) {
+        String formattedTime = convertTimestampToReadableDate(temperatureTime);
+        String displayText = String.format("Temperature: %.2f°C, Time: %s", temperatureVal, formattedTime);
+        temperatureList.add(displayText);
+        adapter.notifyDataSetChanged();
+        Log.d(TAG, "Data added to list: " + displayText);
     }
 
     private String convertTimestampToReadableDate(Long timestamp) {
