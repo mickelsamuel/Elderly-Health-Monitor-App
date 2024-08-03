@@ -1,6 +1,8 @@
 package com.example.elderly_health_monitor_app;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -88,7 +90,12 @@ public class MonitorActivity extends AppCompatActivity {
         setupListeners();
 
         // Register broadcast receiver for font size updates
-        registerReceiver(new FontSizeUpdateReceiver(), new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE"));
+        IntentFilter filter = new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            registerReceiver(new FontSizeUpdateReceiver(), filter, Context.RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(new FontSizeUpdateReceiver(), filter);
+        }
     }
 
     private void setupListeners() {
