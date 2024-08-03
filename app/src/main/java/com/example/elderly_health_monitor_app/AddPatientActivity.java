@@ -22,8 +22,10 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class AddPatientActivity extends AppCompatActivity {
@@ -35,7 +37,7 @@ public class AddPatientActivity extends AppCompatActivity {
     private DatabaseReference databaseRef;
     private String caretakerID;
     private String caretakerName;
-    private String caretakerPhoneNumber; // Add caretaker phone number
+    private String caretakerPhoneNumber;
 
     private static final String TAG = "AddPatientActivity";
 
@@ -51,55 +53,33 @@ public class AddPatientActivity extends AppCompatActivity {
 
         databaseRef = FirebaseDatabase.getInstance().getReference("users");
 
-        // Retrieve caretaker details from the intent
         caretakerID = getIntent().getStringExtra("caretakerID");
         caretakerName = getIntent().getStringExtra("caretakerName");
         caretakerPhoneNumber = getIntent().getStringExtra("caretakerPhoneNumber");
 
         Log.d(TAG, "onCreate: Caretaker details - ID: " + caretakerID + ", Name: " + caretakerName + ", Phone: " + caretakerPhoneNumber);
 
-        Log.d(TAG, "Caretaker ID: " + caretakerID);
-        Log.d(TAG, "Caretaker Name: " + caretakerName);
-        Log.d(TAG, "Caretaker Phone Number: " + caretakerPhoneNumber);
+        patientLastVisitDateInput.setOnClickListener(v -> showDatePickerDialog());
 
-        patientLastVisitDateInput.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showDatePickerDialog();
+        savePatientButton.setOnClickListener(v -> {
+            String patientID = patientIDInput.getText().toString();
+            String lastVisitDate = patientLastVisitDateInput.getText().toString();
+
+            if (TextUtils.isEmpty(patientID) || TextUtils.isEmpty(lastVisitDate)) {
+                Toast.makeText(AddPatientActivity.this, "All fields are required", Toast.LENGTH_SHORT).show();
+                return;
             }
+
+            fetchAndValidatePatient(patientID, lastVisitDate);
         });
 
-        savePatientButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String patientID = patientIDInput.getText().toString();
-                String lastVisitDate = patientLastVisitDateInput.getText().toString();
-
-                if (TextUtils.isEmpty(patientID)) {
-                    Toast.makeText(AddPatientActivity.this, "Patient ID is required", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                if (TextUtils.isEmpty(lastVisitDate)) {
-                    Toast.makeText(AddPatientActivity.this, "Last Visit Date is required", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                validateAndAddPatient(patientID, lastVisitDate);
-            }
-        });
-
-        backButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                setResult(RESULT_CANCELED);
-                finish();
-            }
+        backButton.setOnClickListener(v -> {
+            setResult(RESULT_CANCELED);
+            finish();
         });
 
         registerReceiver(new FontSizeUpdateReceiver(), new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE"));
 
-        // Set initial font sizes based on preferences
         float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
         updateFontSize(fontSize);
     }
@@ -126,13 +106,10 @@ public class AddPatientActivity extends AppCompatActivity {
 
         DatePickerDialog datePickerDialog = new DatePickerDialog(
                 AddPatientActivity.this,
-                R.style.CustomDatePickerDialog, // Apply the custom style here
-                new DatePickerDialog.OnDateSetListener() {
-                    @Override
-                    public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
-                        String selectedDate = dayOfMonth + "/" + (month + 1) + "/" + year;
-                        patientLastVisitDateInput.setText(selectedDate);
-                    }
+                R.style.CustomDatePickerDialog,
+                (view, year1, month1, dayOfMonth) -> {
+                    String selectedDate = dayOfMonth + "/" + (month1 + 1) + "/" + year1;
+                    patientLastVisitDateInput.setText(selectedDate);
                 },
                 year, month, day
         );
@@ -140,8 +117,8 @@ public class AddPatientActivity extends AppCompatActivity {
         datePickerDialog.show();
     }
 
-    private void validateAndAddPatient(final String patientID, final String lastVisitDate) {
-        Log.d(TAG, "validateAndAddPatient: Patient ID: " + patientID + ", Last Visit Date: " + lastVisitDate + ", Caretaker ID: " + caretakerID + ", Caretaker Name: " + caretakerName + ", Caretaker Phone Number: " + caretakerPhoneNumber);
+    private void fetchAndValidatePatient(final String patientID, final String lastVisitDate) {
+        Log.d(TAG, "fetchAndValidatePatient: Patient ID: " + patientID + ", Last Visit Date: " + lastVisitDate + ", Caretaker ID: " + caretakerID + ", Caretaker Name: " + caretakerName + ", Caretaker Phone Number: " + caretakerPhoneNumber);
 
         databaseRef.child(patientID).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -149,31 +126,50 @@ public class AddPatientActivity extends AppCompatActivity {
                 if (dataSnapshot.exists() && "user".equals(dataSnapshot.child("role").getValue(String.class))) {
                     Log.d(TAG, "User exists and has role 'user'");
 
-                    // Add caretaker details to the patient's data
-                    Map<String, Object> patientUpdates = new HashMap<>();
-                    patientUpdates.put("lastVisitDate", lastVisitDate);
-                    patientUpdates.put("caretakerID", caretakerID);
-                    patientUpdates.put("caretakerName", caretakerName);
-                    patientUpdates.put("caretakerPhoneNumber", caretakerPhoneNumber);
+                    String firstName = dataSnapshot.child("firstName").getValue(String.class);
+                    String lastName = dataSnapshot.child("lastName").getValue(String.class);
+                    if (firstName == null || lastName == null) {
+                        Log.e(TAG, "Patient first name or last name is missing in the database");
+                        Toast.makeText(AddPatientActivity.this, "Patient first name or last name is missing in the database", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    String patientName = firstName + " " + lastName;
 
-                    Log.d(TAG, "Updating patient data: " + patientUpdates);
+                    // Fetch caretaker's phone number
+                    databaseRef.child(caretakerID).addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(DataSnapshot caretakerSnapshot) {
+                            caretakerPhoneNumber = caretakerSnapshot.child("phoneNumber").getValue(String.class);
+                            if (caretakerPhoneNumber == null) {
+                                Log.e(TAG, "Caretaker phone number is missing in the database");
+                                Toast.makeText(AddPatientActivity.this, "Caretaker phone number is missing in the database", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
 
-                    databaseRef.child(patientID).updateChildren(patientUpdates).addOnCompleteListener(task -> {
-                        if (task.isSuccessful()) {
-                            Log.d(TAG, "Patient details updated successfully.");
-                            Toast.makeText(AddPatientActivity.this, "Patient details updated successfully", Toast.LENGTH_SHORT).show();
-                            Intent resultIntent = new Intent();
-                            resultIntent.putExtra("patientID", patientID);
-                            resultIntent.putExtra("lastVisitDate", lastVisitDate);
-                            resultIntent.putExtra("name", dataSnapshot.child("firstName").getValue(String.class) + " " + dataSnapshot.child("lastName").getValue(String.class));
-                            resultIntent.putExtra("dob", dataSnapshot.child("dob").getValue(String.class));
-                            resultIntent.putExtra("gender", dataSnapshot.child("gender").getValue(String.class));
-                            resultIntent.putExtra("age", dataSnapshot.child("age").getValue(Integer.class));
-                            setResult(RESULT_OK, resultIntent);
-                            finish();
-                        } else {
-                            Log.e(TAG, "Failed to update patient details: " + task.getException().getMessage());
-                            Toast.makeText(AddPatientActivity.this, "Failed to update patient details", Toast.LENGTH_SHORT).show();
+                            Map<String, Object> patientUpdates = new HashMap<>();
+                            patientUpdates.put("lastVisitDate", lastVisitDate);
+                            patientUpdates.put("caretakerID", caretakerID);
+                            patientUpdates.put("caretakerName", caretakerName);
+                            patientUpdates.put("caretakerPhoneNumber", caretakerPhoneNumber);
+
+                            Log.d(TAG, "Updating patient data: " + patientUpdates);
+
+                            databaseRef.child(patientID).updateChildren(patientUpdates).addOnCompleteListener(task -> {
+                                if (task.isSuccessful()) {
+                                    Log.d(TAG, "Patient details updated successfully.");
+                                    Toast.makeText(AddPatientActivity.this, "Patient details updated successfully", Toast.LENGTH_SHORT).show();
+                                    addPatientToCaretaker(patientID, patientName);
+                                } else {
+                                    Log.e(TAG, "Failed to update patient details: " + task.getException().getMessage());
+                                    Toast.makeText(AddPatientActivity.this, "Failed to update patient details", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onCancelled(DatabaseError databaseError) {
+                            Log.e(TAG, "Database error: " + databaseError.getMessage());
+                            Toast.makeText(AddPatientActivity.this, "Database error: " + databaseError.getMessage(), Toast.LENGTH_SHORT).show();
                         }
                     });
                 } else {
@@ -186,6 +182,45 @@ public class AddPatientActivity extends AppCompatActivity {
             public void onCancelled(DatabaseError databaseError) {
                 Log.e(TAG, "Database error: " + databaseError.getMessage());
                 Toast.makeText(AddPatientActivity.this, "Database error: " + databaseError.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void addPatientToCaretaker(final String patientID, final String patientName) {
+        databaseRef.child(caretakerID).child("patientIDs").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                List<String> patientIDs = new ArrayList<>();
+                if (dataSnapshot.exists()) {
+                    for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                        patientIDs.add(snapshot.getValue(String.class));
+                    }
+                }
+                if (!patientIDs.contains(patientID)) {
+                    patientIDs.add(patientID);
+                    databaseRef.child(caretakerID).child("patientIDs").setValue(patientIDs).addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            Log.d(TAG, "Patient ID added to caretaker's list successfully.");
+                            Intent resultIntent = new Intent();
+                            resultIntent.putExtra("patientID", patientID);
+                            resultIntent.putExtra("patientName", patientName);
+                            resultIntent.putExtra("lastVisitDate", patientLastVisitDateInput.getText().toString());
+                            setResult(RESULT_OK, resultIntent);
+                            finish();
+                        } else {
+                            Log.e(TAG, "Failed to add patient ID to caretaker's list: " + task.getException().getMessage());
+                            Toast.makeText(AddPatientActivity.this, "Failed to add patient ID to caretaker's list", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                } else {
+                    Log.d(TAG, "Patient ID already exists in caretaker's list.");
+                    Toast.makeText(AddPatientActivity.this, "Patient already exists", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, "Database error: " + databaseError.getMessage());
             }
         });
     }
