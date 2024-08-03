@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,6 +20,8 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class CaretakerFragment extends Fragment {
@@ -217,16 +220,25 @@ public class CaretakerFragment extends Fragment {
 
         String caretakerId = usersRef.push().getKey();
 
-        User caretaker = new User(caretakerId, firstName, lastName, phoneNumber, medicalCard, password, "caretaker", license);
+        // Initialize patientIDs as an empty list
+        List<String> patientIDs = new ArrayList<>();
+
+        User caretaker = new User(caretakerId, firstName, lastName, phoneNumber, medicalCard, password, "caretaker", license, patientIDs);
 
         if (caretakerId != null) {
+            Log.d("Firebase", "Creating caretaker account with ID: " + caretakerId);
+            Log.d("Firebase", "Caretaker data: " + caretaker.toString());
             usersRef.child(caretakerId).setValue(caretaker)
                     .addOnSuccessListener(aVoid -> {
+                        Log.d("Firebase", "Caretaker account created successfully");
                         saveLoginState("caretaker", firstName, lastName, caretakerId);
                         Toast.makeText(getActivity(), "Caretaker account created successfully", Toast.LENGTH_SHORT).show();
                         navigateToMainActivity("caretaker", firstName, lastName, caretakerId);
                     })
-                    .addOnFailureListener(e -> showError("Failed to create caretaker account"));
+                    .addOnFailureListener(e -> {
+                        Log.e("Firebase", "Failed to create caretaker account", e);
+                        showError("Failed to create caretaker account");
+                    });
         }
     }
 
@@ -269,11 +281,12 @@ public class CaretakerFragment extends Fragment {
         public String password;
         public String role;
         public String license;
+        public List<String> patientIDs;
 
         public User() {
         }
 
-        public User(String id, String firstName, String lastName, String phoneNumber, String medicalCard, String password, String role, String license) {
+        public User(String id, String firstName, String lastName, String phoneNumber, String medicalCard, String password, String role, String license, List<String> patientIDs) {
             this.id = id;
             this.firstName = firstName;
             this.lastName = lastName;
@@ -282,6 +295,23 @@ public class CaretakerFragment extends Fragment {
             this.password = password;
             this.role = role;
             this.license = license;
+            this.patientIDs = patientIDs;
+        }
+
+        @Override
+        public String toString() {
+            return "User{" +
+                    "id='" + id + '\'' +
+                    ", firstName='" + firstName + '\'' +
+                    ", lastName='" + lastName + '\'' +
+                    ", phoneNumber='" + phoneNumber + '\'' +
+                    ", medicalCard='" + medicalCard + '\'' +
+                    ", password='" + password + '\'' +
+                    ", role='" + role + '\'' +
+                    ", license='" + license + '\'' +
+                    ", patientIDs=" + patientIDs +
+                    '}';
         }
     }
+
 }

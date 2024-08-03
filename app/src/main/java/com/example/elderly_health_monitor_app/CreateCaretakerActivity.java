@@ -3,6 +3,7 @@ package com.example.elderly_health_monitor_app;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -14,6 +15,8 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import java.util.ArrayList;
+import java.util.List;
 
 public class CreateCaretakerActivity extends AppCompatActivity {
 
@@ -89,17 +92,26 @@ public class CreateCaretakerActivity extends AppCompatActivity {
 
         String caretakerId = usersRef.push().getKey();
 
-        User caretaker = new User(caretakerId, firstName, lastName, phoneNumber, medicalCard, password, "caretaker", license);
+        // Initialize patientIDs as an empty list
+        List<String> patientIDs = new ArrayList<>();
+
+        User caretaker = new User(caretakerId, firstName, lastName, phoneNumber, medicalCard, password, "caretaker", license, patientIDs);
 
         if (caretakerId != null) {
+            Log.d("Firebase", "Creating caretaker account with ID: " + caretakerId);
+            Log.d("Firebase", "Caretaker data: " + caretaker.toString());
             usersRef.child(caretakerId).setValue(caretaker)
                     .addOnSuccessListener(aVoid -> {
+                        Log.d("Firebase", "Caretaker account created successfully");
                         Toast.makeText(CreateCaretakerActivity.this, "Caretaker account created successfully", Toast.LENGTH_SHORT).show();
                         Intent intent = new Intent(CreateCaretakerActivity.this, MainActivity.class);
                         startActivity(intent);
                         finish();
                     })
-                    .addOnFailureListener(e -> Toast.makeText(CreateCaretakerActivity.this, "Failed to create caretaker account", Toast.LENGTH_SHORT).show());
+                    .addOnFailureListener(e -> {
+                        Log.e("Firebase", "Failed to create caretaker account", e);
+                        Toast.makeText(CreateCaretakerActivity.this, "Failed to create caretaker account", Toast.LENGTH_SHORT).show();
+                    });
         }
     }
 
@@ -112,11 +124,12 @@ public class CreateCaretakerActivity extends AppCompatActivity {
         public String password;
         public String role;
         public String license;
+        public List<String> patientIDs;
 
         public User() {
         }
 
-        public User(String id, String firstName, String lastName, String phoneNumber, String medicalCard, String password, String role, String license) {
+        public User(String id, String firstName, String lastName, String phoneNumber, String medicalCard, String password, String role, String license, List<String> patientIDs) {
             this.id = id;
             this.firstName = firstName;
             this.lastName = lastName;
@@ -125,6 +138,7 @@ public class CreateCaretakerActivity extends AppCompatActivity {
             this.password = password;
             this.role = role;
             this.license = license;
+            this.patientIDs = patientIDs;
         }
     }
 }

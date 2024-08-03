@@ -7,18 +7,18 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -30,6 +30,7 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 
 public class CaretakerMonitorActivity extends AppCompatActivity {
 
@@ -39,8 +40,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
     private Spinner sortSpinner;
     private Button toggleSortOrderButton;
     private ImageButton settingsButton;
-    private RecyclerView patientRecyclerView;
-    private PatientAdapter patientAdapter;
+    private LinearLayout patientContainer;
 
     private ArrayList<Patient> patients = new ArrayList<>();
     private boolean isAscending = true;
@@ -62,12 +62,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         sortSpinner = findViewById(R.id.sortSpinner);
         toggleSortOrderButton = findViewById(R.id.toggleSortOrderButton);
         settingsButton = findViewById(R.id.settingsButton);
-        patientRecyclerView = findViewById(R.id.patientRecyclerView);
-
-        // Setup RecyclerView
-        patientRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        patientAdapter = new PatientAdapter(this, patients, patient -> removePatient(patient));
-        patientRecyclerView.setAdapter(patientAdapter);
+        patientContainer = findViewById(R.id.patientContainer);
 
         // Retrieve caretaker details from intent
         Intent intent = getIntent();
@@ -141,25 +136,84 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
     }
 
     private void loadPatients(String caretakerId) {
-        databaseRef.orderByChild("caretakerID").equalTo(caretakerId).addValueEventListener(new ValueEventListener() {
+        DatabaseReference caretakerRef = FirebaseDatabase.getInstance().getReference("users").child(caretakerId);
+        caretakerRef.child("patientIDs").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                patients.clear();
-                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
-                    Patient patient = snapshot.getValue(Patient.class);
-                    if (patient != null && "user".equals(patient.getRole())) {
-                        // Add patient to the list
-                        patients.add(patient);
+                List<String> patientIDs = new ArrayList<>();
+                if (dataSnapshot.exists()) {
+                    for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                        patientIDs.add(snapshot.getValue(String.class));
                     }
                 }
-                patientAdapter.notifyDataSetChanged();
+                fetchPatientDetails(patientIDs);
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                Log.e(TAG, "Failed to load patients: " + databaseError.getMessage());
+                Log.e(TAG, "Failed to load caretaker's patient list: " + databaseError.getMessage());
             }
         });
+    }
+
+    private void fetchPatientDetails(List<String> patientIDs) {
+        DatabaseReference patientsRef = FirebaseDatabase.getInstance().getReference("patients");
+        for (String patientId : patientIDs) {
+            patientsRef.child(patientId).addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    Patient patient = dataSnapshot.getValue(Patient.class);
+                    if (patient != null) {
+                        patients.add(patient);
+                        addPatientCard(patient);
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+                    Log.e(TAG, "Failed to load patient details: " + databaseError.getMessage());
+                }
+            });
+        }
+    }
+
+    private void updatePatientViews() {
+        patientContainer.removeAllViews();
+        for (Patient patient : patients) {
+            addPatientCard(patient);
+        }
+    }
+
+    private void addPatientCard(Patient patient) {
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View patientCardView = inflater.inflate(R.layout.patient_card, patientContainer, false);
+
+        TextView patientNameTextView = patientCardView.findViewById(R.id.patientNameTextView);
+        TextView patientIDTextView = patientCardView.findViewById(R.id.patientIDTextView);
+        TextView patientHeartRateText = patientCardView.findViewById(R.id.patientHeartRateText);
+        TextView patientTemperatureText = patientCardView.findViewById(R.id.patientTemperatureText);
+        TextView patientAccelerometerText = patientCardView.findViewById(R.id.patientAccelerometerText);
+        Button removePatientButton = patientCardView.findViewById(R.id.removePatientButton);
+
+        if (patient.getName() != null) {
+            patientNameTextView.setText(patient.getName());
+        } else {
+            patientNameTextView.setText("No Name");
+        }
+
+        if (patient.getPatientID() != null) {
+            patientIDTextView.setText(patient.getPatientID());
+        } else {
+            patientIDTextView.setText("No ID");
+        }
+
+        patientHeartRateText.setText("Heart Rate: " + patient.getHeartRate());
+        patientTemperatureText.setText("Temperature: " + patient.getTemperature() + "°C");
+        patientAccelerometerText.setText("Accelerometer: X: 0.0, Y: 0.0, Z: 0.0");
+
+        removePatientButton.setOnClickListener(v -> removePatient(patient));
+
+        patientContainer.addView(patientCardView);
     }
 
     private void sortPatients(int position) {
@@ -199,7 +253,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         }
 
         Collections.sort(patients, comparator);
-        patientAdapter.notifyDataSetChanged();
+        updatePatientViews();
     }
 
     private void removePatient(Patient patient) {
@@ -220,7 +274,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             return;
         }
 
-        DatabaseReference patientRef = FirebaseDatabase.getInstance().getReference("users").child(patientID);
+        DatabaseReference patientRef = FirebaseDatabase.getInstance().getReference("patients").child(patientID);
         if (patientRef == null) {
             Log.e(TAG, "removePatient: Failed to get DatabaseReference for patient ID: " + patientID);
             return;
@@ -260,7 +314,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
         // Remove patient from the local list and update the view
         patients.remove(patient);
-        patientAdapter.notifyDataSetChanged();
+        updatePatientViews();
 
         Toast.makeText(this, "Patient removed successfully", Toast.LENGTH_SHORT).show();
     }
@@ -282,9 +336,42 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             newPatient.setGender(gender);
             newPatient.setAge(age);
             newPatient.setLastVisitDate(lastVisitDate);
-            patients.add(newPatient);
-            patientAdapter.notifyDataSetChanged();
+            // Check if patient already exists before adding
+            boolean patientExists = false;
+            for (Patient patient : patients) {
+                if (patient.getPatientID() != null && patient.getPatientID().equals(patientID)) {
+                    patientExists = true;
+                    break;
+                }
+            }
+            if (!patientExists) {
+                patients.add(newPatient);
+                addPatientCard(newPatient);
+                addPatientToCaretaker(getIntent().getStringExtra("caretakerId"), patientID);
+            }
         }
+    }
+
+    private void addPatientToCaretaker(String caretakerId, String patientId) {
+        DatabaseReference caretakerRef = FirebaseDatabase.getInstance().getReference("users").child(caretakerId);
+        caretakerRef.child("patientIDs").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                List<String> patientIDs = new ArrayList<>();
+                if (dataSnapshot.exists()) {
+                    for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                        patientIDs.add(snapshot.getValue(String.class));
+                    }
+                }
+                patientIDs.add(patientId);
+                caretakerRef.child("patientIDs").setValue(patientIDs);
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, "Failed to update caretaker's patient list: " + databaseError.getMessage());
+            }
+        });
     }
 
     @Override
@@ -309,12 +396,8 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         }
 
         // Update font size for patient cards
-        updatePatientCardsFontSize(fontSize);
-    }
-
-    private void updatePatientCardsFontSize(float fontSize) {
-        for (int i = 0; i < patientRecyclerView.getChildCount(); i++) {
-            View patientCardView = patientRecyclerView.getChildAt(i);
+        for (int i = 0; i < patientContainer.getChildCount(); i++) {
+            View patientCardView = patientContainer.getChildAt(i);
 
             TextView patientNameTextView = patientCardView.findViewById(R.id.patientNameTextView);
             TextView patientIDTextView = patientCardView.findViewById(R.id.patientIDTextView);
