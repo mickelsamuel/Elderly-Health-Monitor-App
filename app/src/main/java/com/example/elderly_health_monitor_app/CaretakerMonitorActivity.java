@@ -30,7 +30,9 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class CaretakerMonitorActivity extends AppCompatActivity {
 
@@ -49,6 +51,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
     private static final String TAG = "CaretakerMonitorActivity";
     private static final String CHANNEL_ID = "patient_alerts_channel";
 
+    private String caretakerId;
     private String caretakerPhoneNumber;
 
     @Override
@@ -64,11 +67,12 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         settingsButton = findViewById(R.id.settingsButton);
         patientContainer = findViewById(R.id.patientContainer);
 
-        // Retrieve caretaker details from intent
         Intent intent = getIntent();
         String caretakerName = intent.getStringExtra("caretakerName");
-        String caretakerId = intent.getStringExtra("caretakerId");
+        caretakerId = intent.getStringExtra("caretakerId");
         caretakerPhoneNumber = intent.getStringExtra("caretakerPhoneNumber");
+
+        loadPatients(caretakerId);
 
         Log.d(TAG, "onCreate: Caretaker details - Name: " + caretakerName + ", ID: " + caretakerId + ", Phone: " + caretakerPhoneNumber);
 
@@ -76,23 +80,20 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
         databaseRef = FirebaseDatabase.getInstance().getReference("users");
 
-        // Setup Spinner for sorting
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
                 R.array.sort_options, R.layout.spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         sortSpinner.setAdapter(adapter);
 
-        // When starting AddPatientActivity, pass the caretaker's phone number
         addPatientButton.setOnClickListener(v -> {
             Log.d(TAG, "addPatientButton onClick: caretakerId=" + caretakerId + ", caretakerName=" + caretakerName + ", caretakerPhoneNumber=" + caretakerPhoneNumber);
             Intent intent1 = new Intent(CaretakerMonitorActivity.this, AddPatientActivity.class);
             intent1.putExtra("caretakerID", caretakerId);
             intent1.putExtra("caretakerName", caretakerName);
-            intent1.putExtra("caretakerPhoneNumber", caretakerPhoneNumber); // Pass phone number
+            intent1.putExtra("caretakerPhoneNumber", caretakerPhoneNumber);
             startActivityForResult(intent1, 1);
         });
 
-        // Handle sorting selection
         sortSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -101,18 +102,15 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
-                // Do nothing
             }
         });
 
-        // Toggle sorting order
         toggleSortOrderButton.setOnClickListener(v -> {
             isAscending = !isAscending;
             int selectedPosition = sortSpinner.getSelectedItemPosition();
             sortPatients(selectedPosition);
         });
 
-        // Handle settings button click
         settingsButton.setOnClickListener(v -> {
             Intent settingsIntent = new Intent(CaretakerMonitorActivity.this, CaretakerSettingsActivity.class);
             settingsIntent.putExtra("caretakerLicense", caretakerId);
@@ -127,15 +125,14 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
         registerReceiver(new FontSizeUpdateReceiver(), new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE"));
 
-        // Set initial font sizes based on preferences
         float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
         updateFontSize(fontSize);
 
-        // Load patients from Firebase
         loadPatients(caretakerId);
     }
 
     private void loadPatients(String caretakerId) {
+        Log.d(TAG, "Loading patients for caretaker: " + caretakerId);
         DatabaseReference caretakerRef = FirebaseDatabase.getInstance().getReference("users").child(caretakerId);
         caretakerRef.child("patientIDs").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -156,7 +153,20 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         });
     }
 
+    private int patientsToLoad = 0;
+    private int patientsLoaded = 0;
+
     private void fetchPatientDetails(List<String> patientIDs) {
+        patientsToLoad = patientIDs.size();
+        patientsLoaded = 0;
+        patients.clear();
+        patientContainer.removeAllViews();
+
+        if (patientsToLoad == 0) {
+            updateUI();
+            return;
+        }
+
         DatabaseReference patientsRef = FirebaseDatabase.getInstance().getReference("patients");
         for (String patientId : patientIDs) {
             patientsRef.child(patientId).addListenerForSingleValueEvent(new ValueEventListener() {
@@ -165,15 +175,28 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
                     Patient patient = dataSnapshot.getValue(Patient.class);
                     if (patient != null) {
                         patients.add(patient);
-                        addPatientCard(patient);
+                    }
+                    patientsLoaded++;
+                    if (patientsLoaded == patientsToLoad) {
+                        updateUI();
                     }
                 }
 
                 @Override
                 public void onCancelled(DatabaseError databaseError) {
                     Log.e(TAG, "Failed to load patient details: " + databaseError.getMessage());
+                    patientsLoaded++;
+                    if (patientsLoaded == patientsToLoad) {
+                        updateUI();
+                    }
                 }
             });
+        }
+    }
+
+    private void updateUI() {
+        for (Patient patient : patients) {
+            addPatientCard(patient);
         }
     }
 
@@ -185,8 +208,8 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
     }
 
     private void addPatientCard(Patient patient) {
-        LayoutInflater inflater = LayoutInflater.from(this);
-        View patientCardView = inflater.inflate(R.layout.patient_card, patientContainer, false);
+        Log.d(TAG, "Adding card for patient: " + patient.getName());
+        View patientCardView = LayoutInflater.from(this).inflate(R.layout.patient_card, patientContainer, false);
 
         TextView patientNameTextView = patientCardView.findViewById(R.id.patientNameTextView);
         TextView patientIDTextView = patientCardView.findViewById(R.id.patientIDTextView);
@@ -195,20 +218,10 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         TextView patientAccelerometerText = patientCardView.findViewById(R.id.patientAccelerometerText);
         Button removePatientButton = patientCardView.findViewById(R.id.removePatientButton);
 
-        if (patient.getName() != null) {
-            patientNameTextView.setText(patient.getName());
-        } else {
-            patientNameTextView.setText("No Name");
-        }
-
-        if (patient.getPatientID() != null) {
-            patientIDTextView.setText(patient.getPatientID());
-        } else {
-            patientIDTextView.setText("No ID");
-        }
-
-        patientHeartRateText.setText("Heart Rate: " + patient.getHeartRate());
-        patientTemperatureText.setText("Temperature: " + patient.getTemperature() + "°C");
+        patientNameTextView.setText(patient.getName() != null ? patient.getName() : "N/A");
+        patientIDTextView.setText(patient.getPatientID() != null ? patient.getPatientID() : "N/A");
+        patientHeartRateText.setText("Heart Rate: " + (patient.getHeartRate() != 0 ? patient.getHeartRate() : "N/A"));
+        patientTemperatureText.setText("Temperature: " + (patient.getTemperature() != 0 ? patient.getTemperature() + "°C" : "N/A"));
         patientAccelerometerText.setText("Accelerometer: X: 0.0, Y: 0.0, Z: 0.0");
 
         removePatientButton.setOnClickListener(v -> removePatient(patient));
@@ -262,19 +275,13 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             return;
         }
 
-        String caretakerId = getIntent().getStringExtra("caretakerId");
-        if (caretakerId == null) {
-            Log.e(TAG, "removePatient: Caretaker ID is null");
-            return;
-        }
-
         String patientID = patient.getPatientID();
         if (patientID == null) {
             Log.e(TAG, "removePatient: Patient ID is null");
             return;
         }
 
-        DatabaseReference patientRef = FirebaseDatabase.getInstance().getReference("patients").child(patientID);
+        DatabaseReference patientRef = FirebaseDatabase.getInstance().getReference("users").child(patientID);
         if (patientRef == null) {
             Log.e(TAG, "removePatient: Failed to get DatabaseReference for patient ID: " + patientID);
             return;
@@ -282,48 +289,61 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
         Log.d(TAG, "Removing caretaker information for patient: " + patientID);
 
-        // Remove caretaker information from patient's account in the database
-        patientRef.child("caretakerID").removeValue().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                Log.d(TAG, "Successfully removed caretakerID");
-            } else {
-                Log.e(TAG, "Failed to remove caretakerID", task.getException());
-            }
-        });
-        patientRef.child("caretakerName").removeValue().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                Log.d(TAG, "Successfully removed caretakerName");
-            } else {
-                Log.e(TAG, "Failed to remove caretakerName", task.getException());
-            }
-        });
-        patientRef.child("caretakerPhoneNumber").removeValue().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                Log.d(TAG, "Successfully removed caretakerPhoneNumber");
-            } else {
-                Log.e(TAG, "Failed to remove caretakerPhoneNumber", task.getException());
-            }
-        });
-        patientRef.child("lastVisitDate").removeValue().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                Log.d(TAG, "Successfully removed lastVisitDate");
-            } else {
-                Log.e(TAG, "Failed to remove lastVisitDate", task.getException());
-            }
-        });
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("caretakerID", null);
+        updates.put("caretakerName", null);
+        updates.put("caretakerPhoneNumber", null);
+        updates.put("lastVisitDate", null);
 
-        // Remove patient from the local list and update the view
-        patients.remove(patient);
-        updatePatientViews();
+        Log.d(TAG, "Updating patient fields: " + updates);
+        patientRef.updateChildren(updates).addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                Log.d(TAG, "Successfully removed caretaker information and last visit date from patient: " + patientID);
 
-        Toast.makeText(this, "Patient removed successfully", Toast.LENGTH_SHORT).show();
+                databaseRef.child(caretakerId).child("patientIDs").addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+                        List<String> patientIDs = new ArrayList<>();
+                        if (dataSnapshot.exists()) {
+                            for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                                patientIDs.add(snapshot.getValue(String.class));
+                            }
+                        }
+                        Log.d(TAG, "Retrieved caretaker's patient list: " + dataSnapshot);
+                        Log.d(TAG, "Current patient IDs: " + patientIDs);
+
+                        patientIDs.remove(patientID);
+                        Log.d(TAG, "Updated patient IDs: " + patientIDs);
+
+                        databaseRef.child(caretakerId).child("patientIDs").setValue(patientIDs).addOnCompleteListener(task -> {
+                            if (task.isSuccessful()) {
+                                Log.d(TAG, "Patient ID removed from caretaker's list successfully.");
+                                patients.remove(patient);
+                                updatePatientViews();
+                                Toast.makeText(CaretakerMonitorActivity.this, "Patient removed successfully", Toast.LENGTH_SHORT).show();
+                            } else {
+                                Log.e(TAG, "Failed to remove patient ID from caretaker's list: " + task.getException().getMessage());
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+                        Log.e(TAG, "Database error: " + databaseError.getMessage());
+                    }
+                });
+
+            } else {
+                Log.e(TAG, "Failed to remove caretaker information and last visit date from patient: " + task.getException().getMessage());
+            }
+        });
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 1 && resultCode == RESULT_OK) {
-            String name = data.getStringExtra("name");
+            String name = data.getStringExtra("patientName"); // Retrieve patient name
             String dob = data.getStringExtra("dob");
             String patientID = data.getStringExtra("patientID");
             String gender = data.getStringExtra("gender");
@@ -336,7 +356,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             newPatient.setGender(gender);
             newPatient.setAge(age);
             newPatient.setLastVisitDate(lastVisitDate);
-            // Check if patient already exists before adding
             boolean patientExists = false;
             for (Patient patient : patients) {
                 if (patient.getPatientID() != null && patient.getPatientID().equals(patientID)) {
@@ -347,7 +366,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             if (!patientExists) {
                 patients.add(newPatient);
                 addPatientCard(newPatient);
-                addPatientToCaretaker(getIntent().getStringExtra("caretakerId"), patientID);
+                addPatientToCaretaker(caretakerId, patientID);
             }
         }
     }
@@ -363,13 +382,23 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
                         patientIDs.add(snapshot.getValue(String.class));
                     }
                 }
-                patientIDs.add(patientId);
-                caretakerRef.child("patientIDs").setValue(patientIDs);
+                if (!patientIDs.contains(patientId)) {
+                    patientIDs.add(patientId);
+                    caretakerRef.child("patientIDs").setValue(patientIDs).addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            Log.d(TAG, "Patient ID added to caretaker's list successfully.");
+                        } else {
+                            Log.e(TAG, "Failed to add patient ID to caretaker's list: " + task.getException().getMessage());
+                        }
+                    });
+                } else {
+                    Log.d(TAG, "Patient ID already exists in caretaker's list.");
+                }
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                Log.e(TAG, "Failed to update caretaker's patient list: " + databaseError.getMessage());
+                Log.e(TAG, "Database error: " + databaseError.getMessage());
             }
         });
     }
@@ -387,7 +416,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         addPatientButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
         toggleSortOrderButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
 
-        // Update Spinner text size
         for (int i = 0; i < sortSpinner.getCount(); i++) {
             View item = sortSpinner.getSelectedView();
             if (item != null && item instanceof TextView) {
@@ -395,7 +423,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             }
         }
 
-        // Update font size for patient cards
         for (int i = 0; i < patientContainer.getChildCount(); i++) {
             View patientCardView = patientContainer.getChildAt(i);
 
