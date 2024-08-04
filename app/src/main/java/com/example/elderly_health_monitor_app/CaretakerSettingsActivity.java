@@ -438,7 +438,7 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
     private void setField(TextInputEditText field, TextInputLayout layout, String value) {
         if (value != null && !value.isEmpty()) {
             field.setText(value);
-            layout.setHint(value); // Set the hint to the field value
+            layout.setHint(value);
         }
     }
 }

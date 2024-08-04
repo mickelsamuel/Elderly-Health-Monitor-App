@@ -99,7 +99,7 @@ public class LoginActivity extends AppCompatActivity {
         String role = userSnapshot.child("role").getValue(String.class);
         String firstName = userSnapshot.child("firstName").getValue(String.class);
         String lastName = userSnapshot.child("lastName").getValue(String.class);
-        String phoneNumber = userSnapshot.child("phoneNumber").getValue(String.class); // Retrieve phone number
+        String phoneNumber = userSnapshot.child("phoneNumber").getValue(String.class);
         String userId = userSnapshot.getKey();
 
         Log.d(TAG, "handleSuccessfulLogin: role=" + role + ", firstName=" + firstName + ", lastName=" + lastName + ", phoneNumber=" + phoneNumber + ", userId=" + userId);
@@ -111,7 +111,7 @@ public class LoginActivity extends AppCompatActivity {
         editor.putString("firstName", firstName);
         editor.putString("lastName", lastName);
         editor.putString("userId", userId);
-        editor.putString("phoneNumber", phoneNumber); // Save phone number
+        editor.putString("phoneNumber", phoneNumber);
         editor.apply();
 
         if ("caretaker".equals(role)) {
@@ -128,7 +128,7 @@ public class LoginActivity extends AppCompatActivity {
         Intent intent = new Intent(this, CaretakerMonitorActivity.class);
         intent.putExtra("caretakerName", firstName + " " + lastName);
         intent.putExtra("caretakerId", userId);
-        intent.putExtra("caretakerPhoneNumber", phoneNumber); // Pass phone number
+        intent.putExtra("caretakerPhoneNumber", phoneNumber);
         startActivity(intent);
         finish();
     }
@@ -145,17 +145,6 @@ public class LoginActivity extends AppCompatActivity {
         Intent intent = new Intent(this, LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
-    }
-
-    private void saveLoginState(String role, String firstName, String lastName, String userId) {
-        SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putBoolean("isLoggedIn", true);
-        editor.putString("role", role);
-        editor.putString("firstName", firstName);
-        editor.putString("lastName", lastName);
-        editor.putString("userId", userId);
-        editor.apply();
     }
 
     private void navigateToActivity(String role, String firstName, String lastName, String userId) {

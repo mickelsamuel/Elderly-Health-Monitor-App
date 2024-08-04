@@ -28,8 +28,11 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     private void navigateToActivity(String role, String firstName, String lastName, String userId) {
+        SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
+        String phoneNumber = prefs.getString("phoneNumber", "");
+
         if ("caretaker".equals(role)) {
-            startCaretakerActivity(firstName, lastName, userId);
+            startCaretakerActivity(firstName, lastName, userId, phoneNumber);
         } else if ("user".equals(role)) {
             startUserActivity(firstName, lastName, userId);
         } else {
@@ -37,10 +40,11 @@ public class SplashActivity extends AppCompatActivity {
         }
     }
 
-    private void startCaretakerActivity(String firstName, String lastName, String userId) {
+    private void startCaretakerActivity(String firstName, String lastName, String userId, String phoneNumber) {
         Intent intent = new Intent(this, CaretakerMonitorActivity.class);
         intent.putExtra("caretakerName", firstName + " " + lastName);
         intent.putExtra("caretakerId", userId);
+        intent.putExtra("caretakerPhoneNumber", phoneNumber);
         startActivity(intent);
     }
 
