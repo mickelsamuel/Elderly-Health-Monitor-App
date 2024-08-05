@@ -46,19 +46,16 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
 
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-        // Get the intent and retrieve the passed details
         Intent intent = getIntent();
         caretakerLicense = intent.getStringExtra("caretakerLicense");
         Log.d(TAG, "onCreate: Received caretakerLicense from intent: " + caretakerLicense);
 
-        // If caretakerLicense is null or empty, try to get it from SharedPreferences
         if (caretakerLicense == null || caretakerLicense.isEmpty()) {
             SharedPreferences prefs = getSharedPreferences("user_prefs", MODE_PRIVATE);
             caretakerLicense = prefs.getString("caretaker_license", "");
             Log.d(TAG, "onCreate: Retrieved caretakerLicense from SharedPreferences: " + caretakerLicense);
         }
 
-        // Store caretakerLicense in SharedPreferences
         SharedPreferences prefs = getSharedPreferences("user_prefs", MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString("caretaker_license", caretakerLicense);
@@ -96,7 +93,6 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         buttonDeleteAccount = findViewById(R.id.buttonDeleteAccount);
         buttonLogout = findViewById(R.id.buttonLogout);
 
-        // Initialize TextInputLayouts
         tilFirstName = findViewById(R.id.tilFirstName);
         tilLastName = findViewById(R.id.tilLastName);
         tilPhoneNumber = findViewById(R.id.tilPhoneNumber);
@@ -121,7 +117,6 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
                     String medicalCard = snapshot.child("medicalCard").getValue(String.class);
                     String userId = snapshot.child("id").getValue(String.class);
 
-                    // Set the text for each field
                     setField(editTextFirstName, firstName);
                     setField(editTextLastName, lastName);
                     setField(editTextPhoneNumber, phoneNumber);
@@ -129,7 +124,6 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
                     setField(editTextMedicalCard, medicalCard);
                     setField(userIdText, userId);
 
-                    // Set text color to ensure visibility
                     int textColor = getResources().getColor(android.R.color.black);
                     editTextFirstName.setTextColor(textColor);
                     editTextLastName.setTextColor(textColor);
@@ -165,7 +159,6 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         }
     }
 
-
     private void setupFontSizeAdjustment() {
         SharedPreferences prefs = getSharedPreferences("settings", MODE_PRIVATE);
         currentFontSize = prefs.getFloat("font_size", 18);
@@ -177,12 +170,10 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
                 currentFontSize = progress;
                 applyFontSize();
 
-                // Save the font size preference
                 SharedPreferences.Editor editor = prefs.edit();
                 editor.putFloat("font_size", currentFontSize);
                 editor.apply();
 
-                // Update font size in other activities
                 updateFontSizeInActivities(currentFontSize);
             }
 
@@ -236,7 +227,6 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
     }
 
     private void saveChanges(String firstName, String lastName, String phoneNumber, String license, String medicalCard) {
-        // Update the current caretaker data
         Map<String, Object> updates = new HashMap<>();
         updates.put("firstName", firstName);
         updates.put("lastName", lastName);
@@ -246,8 +236,35 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
 
         databaseRef.updateChildren(updates).addOnSuccessListener(aVoid -> {
             Toast.makeText(CaretakerSettingsActivity.this, "Details updated successfully", Toast.LENGTH_SHORT).show();
+            updateCaretakerPhoneNumberInPatients(phoneNumber);
             finish();
         }).addOnFailureListener(e -> Toast.makeText(CaretakerSettingsActivity.this, "Failed to update details", Toast.LENGTH_SHORT).show());
+    }
+
+    private void updateCaretakerPhoneNumberInPatients(String newPhoneNumber) {
+        databaseRef.child("patientIDs").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    for (DataSnapshot patientSnapshot : snapshot.getChildren()) {
+                        String patientId = patientSnapshot.getValue(String.class);
+                        if (patientId != null && !patientId.isEmpty()) {
+                            DatabaseReference patientRef = FirebaseDatabase.getInstance().getReference("users").child(patientId);
+                            patientRef.child("caretakerPhoneNumber").setValue(newPhoneNumber)
+                                    .addOnSuccessListener(aVoid -> Log.d(TAG, "Caretaker phone number updated for patient: " + patientId))
+                                    .addOnFailureListener(e -> Log.e(TAG, "Failed to update caretaker phone number for patient: " + patientId, e));
+                        }
+                    }
+                } else {
+                    Log.e(TAG, "No patient IDs found for caretaker: " + caretakerLicense);
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                Log.e(TAG, "Failed to load patient IDs", error.toException());
+            }
+        });
     }
 
     private void setupChangePassword() {
@@ -289,13 +306,11 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
             return;
         }
 
-        // Re-authenticate the caretaker manually by checking the current password
         databaseRef.child("password").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 String storedPassword = dataSnapshot.getValue(String.class);
                 if (storedPassword != null && storedPassword.equals(currentPassword)) {
-                    // Update the password in the database
                     databaseRef.child("password").setValue(newPassword).addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
                             Log.d(TAG, "Password updated successfully");
@@ -360,19 +375,17 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
             return;
         }
 
-        // Re-authenticate the caretaker manually by checking the current password
         databaseRef.child("password").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 String storedPassword = dataSnapshot.getValue(String.class);
                 if (storedPassword != null && storedPassword.equals(currentPassword)) {
-                    // Delete caretaker data from the database
                     databaseRef.removeValue().addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
                             Log.d(TAG, "Account deleted successfully");
                             Toast.makeText(CaretakerSettingsActivity.this, "Account deleted successfully", Toast.LENGTH_SHORT).show();
                             clearLoginPreferences();
-                            navigateToLogin(); // Navigate to login page
+                            navigateToLogin();
                         } else {
                             Log.e(TAG, "Failed to delete account", task.getException());
                             Toast.makeText(CaretakerSettingsActivity.this, "Failed to delete account: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();

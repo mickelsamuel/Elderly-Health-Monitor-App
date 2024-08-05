@@ -64,10 +64,14 @@
             android:exported="false" />
         <activity
             android:name=".TemperatureActivity"
-            android:exported="false" /> <!-- Firebase Messaging Service -->
+            android:exported="false" />
         <activity
             android:name=".AccelerometerActivity"
             android:exported="false" />
+        <activity
+            android:name=".PatientInfoActivity"
+            android:exported="false" />
+        <!-- Firebase Messaging Service -->
         <service
             android:name=".MyFirebaseMessagingService"
             android:exported="true">
@@ -77,12 +81,10 @@
         </service>
         <receiver
             android:name=".MonitorActivity$FontSizeUpdateReceiver"
-            android:exported="true"> <!-- or android:exported="false" based on your requirement -->
+            android:exported="true">
             <intent-filter>
                 <action android:name="com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE" />
             </intent-filter>
         </receiver>
     </application>
-
-
 </manifest>
