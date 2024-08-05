@@ -32,6 +32,7 @@ import java.util.Map;
 
 public class SettingsActivity extends AppCompatActivity {
 
+    // UI elements for user settings
     private SeekBar seekBarFontSize;
     private TextView textSample, textFontSizeLabel, textEditAccountInfo;
     private TextInputEditText editTextFirstName, editTextLastName, editTextPhoneNumber, editTextEmergencyContact, editTextMedicalCard, editTextUserId, inputCurrentPassword, inputNewPassword, inputConfirmNewPassword;
@@ -67,6 +68,7 @@ public class SettingsActivity extends AppCompatActivity {
         editor.putString("current_user_id", currentUserId);
         editor.apply();
 
+        // Check if userId is not empty, then initialize views and set up functionality
         if (currentUserId != null && !currentUserId.isEmpty()) {
             databaseRef = FirebaseDatabase.getInstance().getReference("users").child(currentUserId);
             initializeViews();
@@ -83,6 +85,7 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
+    // Initialize UI elements
     private void initializeViews() {
         seekBarFontSize = findViewById(R.id.seekBar_font_size);
         textSample = findViewById(R.id.text_sample);
@@ -101,6 +104,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         Log.d(TAG, "initializeViews: Using userId: " + currentUserId);
 
+        // Setup end icon click listener to copy user ID to clipboard
         TextInputLayout tilUserId = findViewById(R.id.tilUserId);
         tilUserId.setEndIconOnClickListener(new View.OnClickListener() {
             @Override
@@ -110,12 +114,14 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
+    // Load user details from Firebase
     private void loadUserDetails() {
         Log.d(TAG, "loadUserDetails: Fetching user details for userId: " + currentUserId);
         databaseRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
                 if (snapshot.exists()) {
+                    // Retrieve user data from the snapshot
                     String firstName = snapshot.child("firstName").getValue(String.class);
                     String lastName = snapshot.child("lastName").getValue(String.class);
                     String phoneNumber = snapshot.child("phoneNumber").getValue(String.class);
@@ -143,7 +149,6 @@ public class SettingsActivity extends AppCompatActivity {
                 } else {
                     Log.e(TAG, "No data found for user: " + currentUserId);
                     Toast.makeText(SettingsActivity.this, "No user data found", Toast.LENGTH_SHORT).show();
-                    // Optionally, navigate back or handle the case
                 }
             }
 
@@ -155,6 +160,7 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
+    // Set up font size adjustment functionality
     private void setupFontSizeAdjustment() {
         SharedPreferences prefs = getSharedPreferences("settings", MODE_PRIVATE);
         currentFontSize = prefs.getFloat("font_size", 18);
@@ -185,6 +191,7 @@ public class SettingsActivity extends AppCompatActivity {
         applyFontSize();
     }
 
+    // Apply the font size to all relevant views
     private void applyFontSize() {
         textSample.setTextSize(currentFontSize);
         textFontSizeLabel.setTextSize(currentFontSize);
@@ -201,17 +208,20 @@ public class SettingsActivity extends AppCompatActivity {
         buttonDeleteAccount.setTextSize(currentFontSize);
     }
 
+    // Broadcast font size changes to other activities
     private void updateFontSizeInActivities(float fontSize) {
         Intent intent = new Intent("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE");
         intent.putExtra("font_size", fontSize);
         sendBroadcast(intent);
     }
 
+    // Set up functionality to save changes
     private void setupSaveChanges() {
         buttonSaveChanges.setOnClickListener(v -> {
             String phoneNumber = editTextPhoneNumber.getText().toString().trim();
             String emergencyContact = editTextEmergencyContact.getText().toString().trim();
 
+            // Validate phone number and emergency contact
             if (phoneNumber.isEmpty() || !phoneNumber.matches("[0-9]+") || phoneNumber.length() != 10) {
                 Toast.makeText(this, "Please enter a valid phone number", Toast.LENGTH_SHORT).show();
                 return;
@@ -226,6 +236,7 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
+    // Save user changes to Firebase
     private void saveChanges(String phoneNumber, String emergencyContact) {
         // Update the current user data
         Map<String, Object> updates = new HashMap<>();
@@ -242,10 +253,12 @@ public class SettingsActivity extends AppCompatActivity {
         }).addOnFailureListener(e -> Toast.makeText(SettingsActivity.this, "Failed to update details", Toast.LENGTH_SHORT).show());
     }
 
+    // Set up logout functionality
     private void setupLogout() {
         buttonLogout.setOnClickListener(v -> showLogoutConfirmationDialog());
     }
 
+    // Show confirmation dialog for logout
     private void showLogoutConfirmationDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("Confirm Logout")
@@ -255,15 +268,18 @@ public class SettingsActivity extends AppCompatActivity {
                 .show();
     }
 
+    // Clear login preferences and navigate to login
     private void logout() {
         clearLoginPreferences();
         navigateToLogin();
     }
 
+    // Set up password change functionality
     private void setupChangePassword() {
         buttonChangePassword.setOnClickListener(v -> showChangePasswordDialog());
     }
 
+    // Show dialog for changing password
     private void showChangePasswordDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Change Password");
@@ -291,6 +307,7 @@ public class SettingsActivity extends AppCompatActivity {
         builder.show();
     }
 
+    // Change the user's password
     private void changePassword(String currentPassword, String newPassword) {
         if (currentUserId == null || currentUserId.isEmpty()) {
             Log.e(TAG, "No authenticated user found.");
@@ -329,10 +346,12 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
+    // Set up delete account functionality
     private void setupDeleteAccount() {
         buttonDeleteAccount.setOnClickListener(v -> showDeleteAccountConfirmationDialog());
     }
 
+    // Show confirmation dialog for deleting account
     private void showDeleteAccountConfirmationDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("Delete Account")
@@ -342,6 +361,7 @@ public class SettingsActivity extends AppCompatActivity {
                 .show();
     }
 
+    // Show dialog for confirming password before deleting account
     private void showDeleteAccountPasswordDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Confirm Password");
@@ -360,6 +380,7 @@ public class SettingsActivity extends AppCompatActivity {
         builder.show();
     }
 
+    // Delete the user's account
     private void deleteAccount(String currentPassword) {
         if (currentUserId == null || currentUserId.isEmpty()) {
             Log.e(TAG, "No authenticated user found.");
@@ -400,6 +421,7 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
+    // Clear login preferences
     private void clearLoginPreferences() {
         SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
@@ -407,6 +429,7 @@ public class SettingsActivity extends AppCompatActivity {
         editor.apply();
     }
 
+    // Navigate to the login activity
     private void navigateToLogin() {
         Log.d(TAG, "Navigating to LoginActivity");
         Intent intent = new Intent(this, LoginActivity.class);
@@ -425,12 +448,14 @@ public class SettingsActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    // Set text for a TextInputEditText field
     private void setField(TextInputEditText field, String value) {
         if (value != null && !value.isEmpty()) {
             field.setText(value);
         }
     }
 
+    // Copy the user ID to clipboard
     private void copyUserIdToClipboard() {
         String userId = editTextUserId.getText().toString();
         ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);

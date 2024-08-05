@@ -6,6 +6,7 @@
     android:layout_height="match_parent"
     android:padding="16dp">
 
+    <!-- ImageButton for navigation, positioned at the top-left corner -->
     <ImageButton
         android:id="@+id/backButton"
         android:layout_width="wrap_content"
@@ -16,6 +17,7 @@
         app:layout_constraintStart_toStartOf="parent"
         android:background="?attr/selectableItemBackgroundBorderless" />
 
+    <!-- GraphView component, positioned below the ImageButton and takes up half the height of the parent -->
     <com.jjoe64.graphview.GraphView
         android:id="@+id/graph"
         android:layout_width="0dp"
@@ -25,6 +27,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/backButton" />
 
+    <!-- ListView component, positioned below the GraphView and takes up the remaining space -->
     <ListView
         android:id="@+id/listView"
         android:layout_width="0dp"

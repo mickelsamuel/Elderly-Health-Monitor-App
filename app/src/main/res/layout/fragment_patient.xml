@@ -7,11 +7,13 @@
     android:layout_height="match_parent"
     android:fillViewport="true">
 
+    <!-- Main container for layout -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         tools:context=".PatientFragment">
 
+        <!-- AppBar with toolbar -->
         <com.google.android.material.appbar.AppBarLayout
             android:id="@+id/appBarLayout"
             android:layout_width="match_parent"
@@ -29,6 +31,7 @@
 
         </com.google.android.material.appbar.AppBarLayout>
 
+        <!-- Form fields layout -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -36,6 +39,7 @@
             android:padding="16dp"
             app:layout_constraintTop_toBottomOf="@id/appBarLayout">
 
+            <!-- First name input -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilFirstName"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -52,6 +56,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Last name input -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilLastName"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -69,6 +74,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Phone number input -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilPhoneNumber"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -86,6 +92,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Emergency contact input -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilEmergencyContact"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -103,6 +110,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Medical card input -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilMedicalCard"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -120,6 +128,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Date of birth input -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilDob"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -140,6 +149,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Age input -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilAge"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -157,6 +167,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Gender input -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilGender"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
@@ -174,6 +185,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Password input -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilPassword"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -192,6 +204,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Confirm password input -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilConfirmPassword"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -210,6 +223,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Create account button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonCreateUser"
                 android:layout_width="match_parent"

@@ -5,3 +5,4 @@
     android:padding="16dp"
     android:textSize="16sp"
     android:textColor="@android:color/black" />
+    <!-- TextView with padding, text size, and color set -->

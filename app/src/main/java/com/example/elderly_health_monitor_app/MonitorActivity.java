@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class MonitorActivity extends AppCompatActivity {
 
+    // UI elements
     private TextView temperatureReading, accelerometerXReading, accelerometerYReading, accelerometerZReading, heartRateReading, userNameText, statusSummary;
     private View temperatureStatus, accelerometerStatus, heartRateStatus;
     private Button callForHelpButton;
@@ -46,14 +47,16 @@ public class MonitorActivity extends AppCompatActivity {
     private static final String TAG = "MonitorActivity";
     private static final AtomicInteger messageId = new AtomicInteger();
 
+    // Firebase references
     private FirebaseDatabase firebaseDatabase;
     private DatabaseReference heartRateRef, temperatureRef, userRef, accelerometerRef;
 
+    // Handler and Runnables for updating data at intervals
     private Handler handler;
     private Runnable heartRateRunnable, temperatureRunnable, accelerometerRunnable;
     private static final int INTERVAL = 1000; // 1 second
 
-    private String userId; // Define userId here
+    private String userId; // User ID for the logged-in user
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +65,7 @@ public class MonitorActivity extends AppCompatActivity {
 
         Log.d(TAG, "onCreate: Initializing views");
 
+        // Initialize UI elements
         userNameText = findViewById(R.id.userNameText);
         temperatureReading = findViewById(R.id.temperatureText);
         accelerometerXReading = findViewById(R.id.accelerometerXValue);
@@ -79,13 +83,15 @@ public class MonitorActivity extends AppCompatActivity {
         temperatureCard = findViewById(R.id.temperatureCard);
         accelerometerCard = findViewById(R.id.accelerometerCard);
 
+        // Initialize Firebase references
         firebaseDatabase = FirebaseDatabase.getInstance();
         heartRateRef = firebaseDatabase.getReference("heartRateValues");
         temperatureRef = firebaseDatabase.getReference("temperatureValues");
         accelerometerRef = firebaseDatabase.getReference("accelerometerValues");
 
+        // Get userId from the intent
         Intent intent = getIntent();
-        userId = intent.getStringExtra("userId"); // Get userId from intent
+        userId = intent.getStringExtra("userId");
 
         Log.d(TAG, "onCreate: Received userId: " + userId);
 
@@ -103,6 +109,9 @@ public class MonitorActivity extends AppCompatActivity {
         handler = new Handler();
     }
 
+    /**
+     * Set up listeners for UI elements
+     */
     private void setupListeners() {
         callForHelpButton.setOnClickListener(v -> showOptionDialog());
         settingsButton.setOnClickListener(v -> {
@@ -125,6 +134,9 @@ public class MonitorActivity extends AppCompatActivity {
         startSavingData();
     }
 
+    /**
+     * Refresh user details from the database
+     */
     private void refreshUserDetails() {
         Log.d(TAG, "refreshUserDetails: Fetching user details for userId: " + userId);
         userRef.addListenerForSingleValueEvent(new ValueEventListener() {
@@ -173,6 +185,9 @@ public class MonitorActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Start saving data to the database at regular intervals
+     */
     private void startSavingData() {
         heartRateRunnable = new Runnable() {
             @Override
@@ -203,6 +218,9 @@ public class MonitorActivity extends AppCompatActivity {
         handler.post(accelerometerRunnable);
     }
 
+    /**
+     * Show dialog to choose between calling caretaker, emergency contact, or emergency services
+     */
     private void showOptionDialog() {
         String[] options = {"Call Caretaker", "Call Emergency Contact", "Call Emergency Services"};
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -217,6 +235,10 @@ public class MonitorActivity extends AppCompatActivity {
         }).show();
     }
 
+    /**
+     * Confirm before making a call to the selected contact
+     * @param type The type of contact to call (Caretaker, Emergency Contact, or Emergency Services)
+     */
     private void confirmCall(String type) {
         if (type.equals("Emergency Services")) {
             AlertDialog.Builder builder = new AlertDialog.Builder(MonitorActivity.this);
@@ -266,6 +288,10 @@ public class MonitorActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Make a call to the given phone number
+     * @param phoneNumber The phone number to call
+     */
     private void callNumber(String phoneNumber) {
         Intent callIntent = new Intent(Intent.ACTION_CALL);
         callIntent.setData(Uri.parse("tel:" + phoneNumber));
@@ -276,6 +302,10 @@ public class MonitorActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Update font size of various UI elements
+     * @param fontSize The new font size to set
+     */
     private void updateFontSize(float fontSize) {
         // Update font sizes for text views
         userNameText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
@@ -304,6 +334,9 @@ public class MonitorActivity extends AppCompatActivity {
         callForHelpButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
     }
 
+    /**
+     * Save heart rate data to the database
+     */
     private void saveHeartRateToDatabase() {
         long timestamp = System.currentTimeMillis();
         String heartRateValue = heartRateReading.getText().toString().replace(" bpm", "").trim();
@@ -314,6 +347,9 @@ public class MonitorActivity extends AppCompatActivity {
         heartRateRef.push().setValue(heartRateData);
     }
 
+    /**
+     * Save temperature data to the database
+     */
     private void saveTemperatureToDatabase() {
         long timestamp = System.currentTimeMillis();
         String temperatureValue = temperatureReading.getText().toString().replace("°C", "").trim();
@@ -324,6 +360,9 @@ public class MonitorActivity extends AppCompatActivity {
         temperatureRef.push().setValue(temperatureData);
     }
 
+    /**
+     * Save accelerometer data to the database
+     */
     private void saveAccelerometerToDatabase() {
         long timestamp = System.currentTimeMillis();
         String accelerometerXValue = String.format("%.2f", Float.parseFloat(accelerometerXReading.getText().toString().replace("g", "").trim()));
@@ -339,7 +378,9 @@ public class MonitorActivity extends AppCompatActivity {
         accelerometerRef.push().setValue(accelerometerData);
     }
 
-
+    /**
+     * Broadcast receiver for updating font size
+     */
     private class FontSizeUpdateReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {

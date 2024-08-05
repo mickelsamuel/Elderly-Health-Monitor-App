@@ -1,9 +1,10 @@
 package com.example.elderly_health_monitor_app;
 
 public class Patient {
+    // Patient attributes
     private String firstName;
     private String lastName;
-    private String dob;
+    private String dob; // Date of birth
     private String patientID;
     private float temperature;
     private int heartRate;
@@ -21,10 +22,11 @@ public class Patient {
     private String phoneNumber;
     private String id;
 
+    // Default constructor required for calls to DataSnapshot.getValue(Patient.class)
     public Patient() {
-        // Default constructor required for calls to DataSnapshot.getValue(Patient.class)
     }
 
+    // Parameterized constructor
     public Patient(String firstName, String lastName, String dob, String patientID) {
         this.firstName = firstName;
         this.lastName = lastName;
@@ -128,6 +130,7 @@ public class Patient {
         this.accelerometerReading = accelerometerReading;
     }
 
+    // Methods to get individual accelerometer readings
     public double getAccelerometerX() {
         return parseAccelerometerValue(0);
     }
@@ -140,6 +143,7 @@ public class Patient {
         return parseAccelerometerValue(2);
     }
 
+    // Helper method to parse accelerometer readings from a comma-separated string
     private double parseAccelerometerValue(int index) {
         if (accelerometerReading == null || accelerometerReading.isEmpty()) {
             return 0.0;

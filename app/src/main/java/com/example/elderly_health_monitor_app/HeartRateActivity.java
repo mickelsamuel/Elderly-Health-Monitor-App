@@ -30,12 +30,14 @@ import java.util.Locale;
 public class HeartRateActivity extends AppCompatActivity {
     private static final String TAG = "HeartRateActivity";
 
+    // UI components
     private ListView listView;
     private ArrayAdapter<String> adapter;
     private ArrayList<String> heartRateList;
     private GraphView graph;
     private LineGraphSeries<DataPoint> series;
 
+    // Firebase database references
     private FirebaseDatabase firebaseDatabase;
     private DatabaseReference heartRateRef;
 
@@ -44,7 +46,7 @@ public class HeartRateActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_heart_rate_page);
 
-        // Find the back button
+        // Find the back button and other UI components
         ImageButton backButton = findViewById(R.id.backButton);
         listView = findViewById(R.id.listView);
         graph = findViewById(R.id.graph);
@@ -58,16 +60,16 @@ public class HeartRateActivity extends AppCompatActivity {
         series = new LineGraphSeries<>();
         graph.addSeries(series);
         graph.getGridLabelRenderer().setLabelFormatter(new DateAsXAxisLabelFormatter(this));
-        graph.getGridLabelRenderer().setNumHorizontalLabels(3); // only 3 because of space
+        graph.getGridLabelRenderer().setNumHorizontalLabels(3); // Only 3 because of space
 
-        // set manual x bounds to have nice steps
+        // Set manual x bounds to have nice steps
         long now = System.currentTimeMillis();
         long sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
         graph.getViewport().setMinX(sevenDaysAgo);
         graph.getViewport().setMaxX(now);
         graph.getViewport().setXAxisBoundsManual(true);
 
-        // enable scaling and scrolling
+        // Enable scaling and scrolling
         graph.getViewport().setScalable(true);
         graph.getViewport().setScalableY(true);
 
@@ -123,12 +125,17 @@ public class HeartRateActivity extends AppCompatActivity {
 
             @Override
             public void onCancelled(@NonNull DatabaseError databaseError) {
-                // Handle possible errors.
+                // Handle possible errors
                 Log.e(TAG, "Error fetching heart rate data", databaseError.toException());
             }
         });
     }
 
+    /**
+     * Add heart rate data to the list view and update the adapter
+     * @param heartVal The heart rate value
+     * @param heartTime The timestamp of the heart rate value
+     */
     private void addDataToList(final Long heartVal, final Long heartTime) {
         String formattedTime = convertTimestampToReadableDate(heartTime);
         String displayText = String.format("Heart Rate: %d bpm, Time: %s", heartVal, formattedTime);
@@ -137,6 +144,11 @@ public class HeartRateActivity extends AppCompatActivity {
         Log.d(TAG, "Data added to list: " + displayText);
     }
 
+    /**
+     * Convert timestamp to a readable date format
+     * @param timestamp The timestamp to convert
+     * @return The formatted date string
+     */
     private String convertTimestampToReadableDate(Long timestamp) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         Date date = new Date(timestamp);

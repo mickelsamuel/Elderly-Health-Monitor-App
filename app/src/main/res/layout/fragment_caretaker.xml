@@ -12,12 +12,14 @@
         android:layout_height="wrap_content"
         tools:context=".CaretakerFragment">
 
+        <!-- AppBarLayout for the top toolbar -->
         <com.google.android.material.appbar.AppBarLayout
             android:id="@+id/appBarLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:layout_constraintTop_toTopOf="parent">
 
+            <!-- Toolbar with a back navigation icon and title -->
             <com.google.android.material.appbar.MaterialToolbar
                 android:id="@+id/topAppBar"
                 android:layout_width="match_parent"
@@ -29,6 +31,7 @@
 
         </com.google.android.material.appbar.AppBarLayout>
 
+        <!-- LinearLayout for the form fields -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -36,6 +39,7 @@
             android:padding="16dp"
             app:layout_constraintTop_toBottomOf="@id/appBarLayout">
 
+            <!-- TextInputLayout for First Name with icon -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilFirstName"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -52,6 +56,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- TextInputLayout for Last Name with icon -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilLastName"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -69,6 +74,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- TextInputLayout for Phone Number with icon -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilPhoneNumber"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -86,6 +92,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- TextInputLayout for Medical Card with icon -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilMedicalCard"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -103,6 +110,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- TextInputLayout for License with icon -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilLicense"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -120,6 +128,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- TextInputLayout for Password with toggle visibility -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilPassword"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -138,6 +147,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- TextInputLayout for Confirm Password with toggle visibility -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilConfirmPassword"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -156,6 +166,7 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Button to create a caretaker account -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonCreateCaretaker"
                 android:layout_width="match_parent"

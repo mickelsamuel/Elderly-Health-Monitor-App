@@ -28,11 +28,14 @@ import java.util.Map;
 
 public class CaretakerSettingsActivity extends AppCompatActivity {
 
+    // UI components
     private SeekBar seekBarFontSize;
     private TextView textSample, textFontSizeLabel, textEditAccountInfo, userIdText;
     private TextInputEditText editTextFirstName, editTextLastName, editTextPhoneNumber, editTextLicense, editTextMedicalCard, inputCurrentPassword, inputNewPassword, inputConfirmNewPassword;
     private MaterialButton buttonSaveChanges, buttonChangePassword, buttonDeleteAccount, buttonLogout;
     private TextInputLayout tilFirstName, tilLastName, tilPhoneNumber, tilLicense, tilMedicalCard, tilUserId;
+
+    // Firebase database reference
     private DatabaseReference databaseRef;
     private String caretakerLicense;
     private float currentFontSize = 18;
@@ -44,8 +47,10 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_caretaker_settings);
 
+        // Enable back button in the action bar
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
+        // Get caretaker license from intent or shared preferences
         Intent intent = getIntent();
         caretakerLicense = intent.getStringExtra("caretakerLicense");
         Log.d(TAG, "onCreate: Received caretakerLicense from intent: " + caretakerLicense);
@@ -61,6 +66,7 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         editor.putString("caretaker_license", caretakerLicense);
         editor.apply();
 
+        // If caretaker license is available, initialize the views and load details
         if (caretakerLicense != null && !caretakerLicense.isEmpty()) {
             databaseRef = FirebaseDatabase.getInstance().getReference("users").child(caretakerLicense);
             initializeViews();
@@ -77,6 +83,9 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Initialize the views by finding them in the layout
+     */
     private void initializeViews() {
         seekBarFontSize = findViewById(R.id.seekBar_font_size);
         textSample = findViewById(R.id.text_sample);
@@ -103,6 +112,9 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         Log.d(TAG, "initializeViews: Using caretakerLicense: " + caretakerLicense);
     }
 
+    /**
+     * Load caretaker details from Firebase
+     */
     private void loadCaretakerDetails() {
         Log.d(TAG, "loadCaretakerDetails: Fetching caretaker details for caretakerLicense: " + caretakerLicense);
         databaseRef.addListenerForSingleValueEvent(new ValueEventListener() {
@@ -147,18 +159,31 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Set text for a TextInputEditText field
+     * @param field The TextInputEditText field
+     * @param value The value to set
+     */
     private void setField(TextInputEditText field, String value) {
         if (value != null && !value.isEmpty()) {
             field.setText(value);
         }
     }
 
+    /**
+     * Set text for a TextView field
+     * @param field The TextView field
+     * @param value The value to set
+     */
     private void setField(TextView field, String value) {
         if (value != null && !value.isEmpty()) {
             field.setText(value);
         }
     }
 
+    /**
+     * Set up the font size adjustment seek bar
+     */
     private void setupFontSizeAdjustment() {
         SharedPreferences prefs = getSharedPreferences("settings", MODE_PRIVATE);
         currentFontSize = prefs.getFloat("font_size", 18);
@@ -187,6 +212,9 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         applyFontSize();
     }
 
+    /**
+     * Apply the font size to UI components
+     */
     private void applyFontSize() {
         textSample.setTextSize(currentFontSize);
         textFontSizeLabel.setTextSize(currentFontSize);
@@ -203,12 +231,19 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         buttonLogout.setTextSize(currentFontSize);
     }
 
+    /**
+     * Update the font size in all activities by sending a broadcast
+     * @param fontSize The font size to set
+     */
     private void updateFontSizeInActivities(float fontSize) {
         Intent intent = new Intent("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE");
         intent.putExtra("font_size", fontSize);
         sendBroadcast(intent);
     }
 
+    /**
+     * Set up the save changes button
+     */
     private void setupSaveChanges() {
         buttonSaveChanges.setOnClickListener(v -> {
             String firstName = editTextFirstName.getText().toString().trim();
@@ -226,6 +261,14 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Save changes to the caretaker's details in Firebase
+     * @param firstName The first name of the caretaker
+     * @param lastName The last name of the caretaker
+     * @param phoneNumber The phone number of the caretaker
+     * @param license The license of the caretaker
+     * @param medicalCard The medical card of the caretaker
+     */
     private void saveChanges(String firstName, String lastName, String phoneNumber, String license, String medicalCard) {
         Map<String, Object> updates = new HashMap<>();
         updates.put("firstName", firstName);
@@ -241,6 +284,10 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         }).addOnFailureListener(e -> Toast.makeText(CaretakerSettingsActivity.this, "Failed to update details", Toast.LENGTH_SHORT).show());
     }
 
+    /**
+     * Update the caretaker's phone number in the patients' records
+     * @param newPhoneNumber The new phone number
+     */
     private void updateCaretakerPhoneNumberInPatients(String newPhoneNumber) {
         databaseRef.child("patientIDs").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -267,10 +314,16 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Set up the change password button
+     */
     private void setupChangePassword() {
         buttonChangePassword.setOnClickListener(v -> showChangePasswordDialog());
     }
 
+    /**
+     * Show the change password dialog
+     */
     private void showChangePasswordDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Change Password");
@@ -298,6 +351,11 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         builder.show();
     }
 
+    /**
+     * Change the caretaker's password in Firebase
+     * @param currentPassword The current password
+     * @param newPassword The new password
+     */
     private void changePassword(String currentPassword, String newPassword) {
         if (caretakerLicense == null || caretakerLicense.isEmpty()) {
             Log.e(TAG, "No authenticated caretaker found.");
@@ -334,10 +392,16 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Set up the delete account button
+     */
     private void setupDeleteAccount() {
         buttonDeleteAccount.setOnClickListener(v -> showDeleteAccountDialog());
     }
 
+    /**
+     * Show the delete account dialog
+     */
     private void showDeleteAccountDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Delete Account");
@@ -349,6 +413,9 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         builder.show();
     }
 
+    /**
+     * Show the confirm password dialog before deleting the account
+     */
     private void showDeleteAccountPasswordDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Confirm Password");
@@ -367,6 +434,10 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         builder.show();
     }
 
+    /**
+     * Delete the caretaker's account from Firebase
+     * @param currentPassword The current password
+     */
     private void deleteAccount(String currentPassword) {
         if (caretakerLicense == null || caretakerLicense.isEmpty()) {
             Log.e(TAG, "No authenticated caretaker found.");
@@ -405,6 +476,9 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Clear the login preferences
+     */
     private void clearLoginPreferences() {
         SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
@@ -412,6 +486,9 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         editor.apply();
     }
 
+    /**
+     * Navigate to the login activity
+     */
     private void navigateToLogin() {
         Log.d(TAG, "Navigating to LoginActivity");
         Intent intent = new Intent(this, LoginActivity.class);
@@ -421,10 +498,16 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         Log.d(TAG, "Finished navigating to LoginActivity");
     }
 
+    /**
+     * Set up the logout button
+     */
     private void setupLogout() {
         buttonLogout.setOnClickListener(v -> showLogoutConfirmationDialog());
     }
 
+    /**
+     * Show the logout confirmation dialog
+     */
     private void showLogoutConfirmationDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("Confirm Logout")
@@ -434,6 +517,9 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
                 .show();
     }
 
+    /**
+     * Logout the caretaker and navigate to login activity
+     */
     private void logout() {
         clearLoginPreferences();
         navigateToLogin();
@@ -448,6 +534,12 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * Set text for a TextInputEditText field and update the TextInputLayout hint
+     * @param field The TextInputEditText field
+     * @param layout The TextInputLayout
+     * @param value The value to set
+     */
     private void setField(TextInputEditText field, TextInputLayout layout, String value) {
         if (value != null && !value.isEmpty()) {
             field.setText(value);

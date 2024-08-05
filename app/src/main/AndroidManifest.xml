@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <!-- Permissions -->
+
+    <!-- Permissions required by the app -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
 
+    <!-- Specify that the app requires telephony hardware -->
     <uses-feature
         android:name="android.hardware.telephony"
         android:required="true" />
 
+    <!-- Application configuration -->
     <application
         android:name=".MyApplication"
         android:allowBackup="true"
@@ -21,6 +24,7 @@
         android:theme="@style/Theme.ElderlyHealthMonitorApp"
         tools:targetApi="31">
 
+        <!-- SplashActivity as the main entry point of the app -->
         <activity
             android:name=".SplashActivity"
             android:exported="true">
@@ -29,49 +33,78 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Caretaker settings activity, not accessible from outside the app -->
         <activity
             android:name=".CaretakerSettingsActivity"
             android:exported="false" />
+
+        <!-- Main activity accessible from outside the app -->
         <activity
             android:name=".MainActivity"
             android:exported="true" />
+
+        <!-- Login activity accessible from outside the app -->
         <activity
             android:name=".LoginActivity"
             android:exported="true" />
+
+        <!-- Create user activity accessible from outside the app -->
         <activity
             android:name=".CreateUserActivity"
             android:exported="true" />
+
+        <!-- Create caretaker activity accessible from outside the app -->
         <activity
             android:name=".CreateCaretakerActivity"
             android:exported="true" />
+
+        <!-- Account creation activity accessible from outside the app -->
         <activity
             android:name=".AccountCreationActivity"
             android:exported="true" />
+
+        <!-- Add patient activity, not accessible from outside the app -->
         <activity
             android:name=".AddPatientActivity"
             android:exported="false" />
+
+        <!-- Caretaker monitor activity, not accessible from outside the app -->
         <activity
             android:name=".CaretakerMonitorActivity"
             android:exported="false" />
+
+        <!-- Settings activity accessible from outside the app -->
         <activity
             android:name=".SettingsActivity"
             android:exported="true" />
+
+        <!-- Monitor activity, not accessible from outside the app -->
         <activity
             android:name=".MonitorActivity"
             android:exported="false" />
+
+        <!-- Heart rate activity, not accessible from outside the app -->
         <activity
             android:name=".HeartRateActivity"
             android:exported="false" />
+
+        <!-- Temperature activity, not accessible from outside the app -->
         <activity
             android:name=".TemperatureActivity"
             android:exported="false" />
+
+        <!-- Accelerometer activity, not accessible from outside the app -->
         <activity
             android:name=".AccelerometerActivity"
             android:exported="false" />
+
+        <!-- Patient info activity, not accessible from outside the app -->
         <activity
             android:name=".PatientInfoActivity"
             android:exported="false" />
-        <!-- Firebase Messaging Service -->
+
+        <!-- Firebase messaging service for handling push notifications -->
         <service
             android:name=".MyFirebaseMessagingService"
             android:exported="true">
@@ -79,6 +112,8 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <!-- Broadcast receiver for font size updates in MonitorActivity -->
         <receiver
             android:name=".MonitorActivity$FontSizeUpdateReceiver"
             android:exported="true">

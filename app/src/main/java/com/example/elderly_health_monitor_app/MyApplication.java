@@ -10,7 +10,7 @@ public class MyApplication extends Application {
         super.onCreate();
         // Initialize Firebase
         FirebaseApp.initializeApp(this);
-        // Enable Firebase disk persistence
+        // Enable Firebase disk persistence to allow offline data storage and synchronization
         FirebaseDatabase.getInstance().setPersistenceEnabled(true);
     }
 }

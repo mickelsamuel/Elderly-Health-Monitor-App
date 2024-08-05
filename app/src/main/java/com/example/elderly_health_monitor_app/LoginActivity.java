@@ -22,10 +22,12 @@ import java.util.ArrayList;
 public class LoginActivity extends AppCompatActivity {
     private static final String TAG = "LoginActivity";
 
+    // UI components
     private TextInputEditText editTextFirstName;
     private TextInputEditText editTextLastName;
     private TextInputEditText editTextPassword;
 
+    // Firebase database references
     private FirebaseDatabase firebaseDatabase;
     private DatabaseReference usersRef;
 
@@ -34,10 +36,12 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login_page);
 
+        // Initialize UI components
         editTextFirstName = findViewById(R.id.editTextFirstName);
         editTextLastName = findViewById(R.id.editTextLastName);
         editTextPassword = findViewById(R.id.editTextPassword);
 
+        // Initialize Firebase database references
         firebaseDatabase = FirebaseDatabase.getInstance();
         usersRef = firebaseDatabase.getReference("users");
 
@@ -57,6 +61,9 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Handle the login button click
+     */
     public void onLoginClick(View view) {
         final String firstName = editTextFirstName.getText().toString().trim();
         final String lastName = editTextLastName.getText().toString().trim();
@@ -67,6 +74,7 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
+        // Query the Firebase database to validate user credentials
         usersRef.orderByChild("firstName").equalTo(firstName)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
@@ -94,6 +102,9 @@ public class LoginActivity extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Handle a successful login
+     */
     private void handleSuccessfulLogin(DataSnapshot userSnapshot) {
         String role = userSnapshot.child("role").getValue(String.class);
         String firstName = userSnapshot.child("firstName").getValue(String.class);
@@ -103,6 +114,7 @@ public class LoginActivity extends AppCompatActivity {
 
         Log.d(TAG, "handleSuccessfulLogin: role=" + role + ", firstName=" + firstName + ", lastName=" + lastName + ", phoneNumber=" + phoneNumber + ", userId=" + userId);
 
+        // Save login details in SharedPreferences
         SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
         editor.putBoolean("isLoggedIn", true);
@@ -113,6 +125,7 @@ public class LoginActivity extends AppCompatActivity {
         editor.putString("phoneNumber", phoneNumber);
         editor.apply();
 
+        // Navigate to the appropriate activity based on the user's role
         if ("caretaker".equals(role)) {
             loadCaretakerPatientsAndStartActivity(firstName, lastName, userId, phoneNumber);
         } else if ("user".equals(role)) {
@@ -122,6 +135,9 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Load caretaker's patients and start the CaretakerMonitorActivity
+     */
     private void loadCaretakerPatientsAndStartActivity(String firstName, String lastName, String userId, String phoneNumber) {
         DatabaseReference caretakerRef = usersRef.child(userId).child("patientIDs");
         caretakerRef.addListenerForSingleValueEvent(new ValueEventListener() {
@@ -144,6 +160,9 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Start the CaretakerMonitorActivity
+     */
     private void startCaretakerActivity(String firstName, String lastName, String userId, String phoneNumber, ArrayList<String> patientIDs) {
         Log.d(TAG, "startCaretakerActivity: firstName=" + firstName + ", lastName=" + lastName + ", userId=" + userId + ", phoneNumber=" + phoneNumber);
         Intent intent = new Intent(this, CaretakerMonitorActivity.class);
@@ -155,6 +174,9 @@ public class LoginActivity extends AppCompatActivity {
         finish();
     }
 
+    /**
+     * Clear login preferences
+     */
     private void clearLoginPreferences() {
         SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
@@ -162,6 +184,9 @@ public class LoginActivity extends AppCompatActivity {
         editor.apply();
     }
 
+    /**
+     * Navigate to the LoginActivity
+     */
     private void navigateToLogin() {
         clearLoginPreferences();
         Intent intent = new Intent(this, LoginActivity.class);
@@ -169,6 +194,9 @@ public class LoginActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
+    /**
+     * Navigate to the appropriate activity based on the user's role
+     */
     private void navigateToActivity(String role, String firstName, String lastName, String userId) {
         SharedPreferences prefs = getSharedPreferences("LoginPrefs", MODE_PRIVATE);
         String phoneNumber = prefs.getString("phoneNumber", "");
@@ -182,6 +210,9 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Start the MonitorActivity for a user
+     */
     private void startUserActivity(String firstName, String lastName, String userId) {
         Intent intent = new Intent(this, MonitorActivity.class);
         intent.putExtra("userName", firstName + " " + lastName);
@@ -190,4 +221,3 @@ public class LoginActivity extends AppCompatActivity {
         finish();
     }
 }
-//EOF

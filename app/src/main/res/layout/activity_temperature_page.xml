@@ -6,6 +6,7 @@
     android:layout_height="match_parent"
     android:padding="16dp">
 
+    <!-- Back Button -->
     <ImageButton
         android:id="@+id/backButton"
         android:layout_width="wrap_content"
@@ -16,6 +17,7 @@
         app:layout_constraintStart_toStartOf="parent"
         android:background="?attr/selectableItemBackgroundBorderless" />
 
+    <!-- GraphView -->
     <com.jjoe64.graphview.GraphView
         android:id="@+id/graph"
         android:layout_width="0dp"
@@ -25,6 +27,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/backButton" />
 
+    <!-- ListView -->
     <ListView
         android:id="@+id/listView"
         android:layout_width="0dp"

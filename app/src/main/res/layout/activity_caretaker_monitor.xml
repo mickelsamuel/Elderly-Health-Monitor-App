@@ -7,6 +7,7 @@
     android:layout_height="match_parent"
     tools:context=".CaretakerMonitorActivity">
 
+    <!-- TextView displaying a welcome message -->
     <TextView
         android:id="@+id/userNameText"
         android:layout_width="wrap_content"
@@ -17,6 +18,7 @@
         app:layout_constraintStart_toStartOf="parent"
         android:layout_margin="16dp" />
 
+    <!-- ImageButton for accessing settings -->
     <ImageButton
         android:id="@+id/settingsButton"
         android:layout_width="48dp"
@@ -27,6 +29,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_margin="16dp" />
 
+    <!-- TextView showing a summary of patients' health status -->
     <TextView
         android:id="@+id/statusSummary"
         android:layout_width="0dp"
@@ -38,6 +41,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_margin="16dp" />
 
+    <!-- Button for adding a new patient -->
     <Button
         android:id="@+id/addPatientButton"
         android:layout_width="wrap_content"
@@ -48,6 +52,7 @@
         app:layout_constraintStart_toStartOf="parent"
         android:layout_margin="16dp" />
 
+    <!-- Horizontal LinearLayout containing a Spinner and a Button for sorting -->
     <LinearLayout
         android:id="@+id/sortingLayout"
         android:layout_width="0dp"
@@ -58,6 +63,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_margin="16dp">
 
+        <!-- Spinner for selecting sorting criteria -->
         <Spinner
             android:id="@+id/sortSpinner"
             android:layout_width="0dp"
@@ -65,6 +71,7 @@
             android:layout_weight="1"
             android:layout_marginEnd="8dp" />
 
+        <!-- Button to toggle sort order -->
         <Button
             android:id="@+id/toggleSortOrderButton"
             android:layout_width="wrap_content"
@@ -73,6 +80,7 @@
             android:textSize="18sp" />
     </LinearLayout>
 
+    <!-- ScrollView to contain patient details -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -81,6 +89,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
+        <!-- LinearLayout inside ScrollView to hold patient details -->
         <LinearLayout
             android:id="@+id/patientContainer"
             android:layout_width="match_parent"

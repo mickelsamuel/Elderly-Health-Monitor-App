@@ -44,17 +44,17 @@ public class AccelerometerActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_accelerometer_page);
 
-        // Find the back button
+        // Initialize the back button and list view from the layout
         ImageButton backButton = findViewById(R.id.backButton);
         listView = findViewById(R.id.listView);
         graph = findViewById(R.id.graph);
 
-        // Set up the ListView and adapter
+        // Set up the ListView and its adapter
         accelerometerList = new ArrayList<>();
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, accelerometerList);
         listView.setAdapter(adapter);
 
-        // Set up the graph
+        // Initialize the graph series for X, Y, and Z axes
         seriesX = new LineGraphSeries<>();
         seriesY = new LineGraphSeries<>();
         seriesZ = new LineGraphSeries<>();
@@ -83,7 +83,10 @@ public class AccelerometerActivity extends AppCompatActivity {
                 ArrayList<DataPoint> dataPointsZ = new ArrayList<>();
                 long now = System.currentTimeMillis();
                 long sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+
+                // Loop through all the children of the data snapshot
                 for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    // Retrieve accelerometer values and timestamp
                     Double accelerometerXVal = snapshot.child("accelerometerXVal").getValue(Double.class);
                     Double accelerometerYVal = snapshot.child("accelerometerYVal").getValue(Double.class);
                     Double accelerometerZVal = snapshot.child("accelerometerZVal").getValue(Double.class);
@@ -91,6 +94,7 @@ public class AccelerometerActivity extends AppCompatActivity {
 
                     Log.d(TAG, "Fetched data - X: " + accelerometerXVal + ", Y: " + accelerometerYVal + ", Z: " + accelerometerZVal + ", Time: " + accelerometerTime);
 
+                    // Check if values are not null and within the last 7 days
                     if (accelerometerXVal != null && accelerometerYVal != null && accelerometerZVal != null && accelerometerTime != null) {
                         if (accelerometerTime >= sevenDaysAgo && accelerometerTime <= now) {
                             Log.d(TAG, "Valid data for last 7 days - X: " + accelerometerXVal + ", Y: " + accelerometerYVal + ", Z: " + accelerometerZVal + ", Time: " + accelerometerTime);
@@ -125,6 +129,11 @@ public class AccelerometerActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Set up the graph with necessary properties and series
+     *
+     * @param graph The GraphView object to set up
+     */
     private void setupGraph(GraphView graph) {
         graph.addSeries(seriesX);
         graph.addSeries(seriesY);
@@ -132,14 +141,14 @@ public class AccelerometerActivity extends AppCompatActivity {
         graph.getGridLabelRenderer().setLabelFormatter(new DateAsXAxisLabelFormatter(this));
         graph.getGridLabelRenderer().setNumHorizontalLabels(3); // only 3 because of space
 
-        // set manual x bounds to have nice steps
+        // Set manual x bounds to have nice steps
         long now = System.currentTimeMillis();
         long sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
         graph.getViewport().setMinX(sevenDaysAgo);
         graph.getViewport().setMaxX(now);
         graph.getViewport().setXAxisBoundsManual(true);
 
-        // enable scaling and scrolling
+        // Enable scaling and scrolling
         graph.getViewport().setScalable(true);
         graph.getViewport().setScalableY(true);
 
@@ -149,6 +158,11 @@ public class AccelerometerActivity extends AppCompatActivity {
         seriesZ.setColor(android.graphics.Color.BLUE);
     }
 
+    /**
+     * Sort the data points by timestamp in ascending order
+     *
+     * @param dataPoints The list of data points to sort
+     */
     private void sortDataPointsByTimestamp(ArrayList<DataPoint> dataPoints) {
         Collections.sort(dataPoints, new Comparator<DataPoint>() {
             @Override
@@ -158,6 +172,14 @@ public class AccelerometerActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Add accelerometer data to the list view and notify the adapter
+     *
+     * @param accelerometerXVal The X-axis value of the accelerometer
+     * @param accelerometerYVal The Y-axis value of the accelerometer
+     * @param accelerometerZVal The Z-axis value of the accelerometer
+     * @param accelerometerTime The timestamp of the accelerometer data
+     */
     private void addDataToList(final Double accelerometerXVal, final Double accelerometerYVal, final Double accelerometerZVal, final Long accelerometerTime) {
         String formattedTime = convertTimestampToReadableDate(accelerometerTime);
         String displayText = String.format("X: %.2f m/s², Y: %.2f m/s², Z: %.2f m/s², Time: %s", accelerometerXVal, accelerometerYVal, accelerometerZVal, formattedTime);
@@ -166,6 +188,12 @@ public class AccelerometerActivity extends AppCompatActivity {
         Log.d(TAG, "Data added to list: " + displayText);
     }
 
+    /**
+     * Convert a timestamp to a readable date string
+     *
+     * @param timestamp The timestamp to convert
+     * @return A formatted date string
+     */
     private String convertTimestampToReadableDate(Long timestamp) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         Date date = new Date(timestamp);

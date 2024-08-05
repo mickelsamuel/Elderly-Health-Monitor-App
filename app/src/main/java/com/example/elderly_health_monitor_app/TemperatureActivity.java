@@ -30,12 +30,14 @@ import java.util.Locale;
 public class TemperatureActivity extends AppCompatActivity {
     private static final String TAG = "TemperatureActivity";
 
+    // UI components
     private ListView listView;
     private ArrayAdapter<String> adapter;
     private ArrayList<String> temperatureList;
     private GraphView graph;
     private LineGraphSeries<DataPoint> series;
 
+    // Firebase references
     private FirebaseDatabase firebaseDatabase;
     private DatabaseReference temperatureRef;
 
@@ -44,7 +46,7 @@ public class TemperatureActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_temperature_page);
 
-        // Find the back button
+        // Initialize UI components
         ImageButton backButton = findViewById(R.id.backButton);
         listView = findViewById(R.id.listView);
         graph = findViewById(R.id.graph);
@@ -60,14 +62,14 @@ public class TemperatureActivity extends AppCompatActivity {
         graph.getGridLabelRenderer().setLabelFormatter(new DateAsXAxisLabelFormatter(this));
         graph.getGridLabelRenderer().setNumHorizontalLabels(3); // only 3 because of space
 
-        // set manual x bounds to have nice steps
+        // Set manual x bounds to have nice steps
         long now = System.currentTimeMillis();
         long sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
         graph.getViewport().setMinX(sevenDaysAgo);
         graph.getViewport().setMaxX(now);
         graph.getViewport().setXAxisBoundsManual(true);
 
-        // enable scaling and scrolling
+        // Enable scaling and scrolling
         graph.getViewport().setScalable(true);
         graph.getViewport().setScalableY(true);
 
@@ -129,6 +131,7 @@ public class TemperatureActivity extends AppCompatActivity {
         });
     }
 
+    // Method to add temperature data to the list view and update the adapter
     private void addDataToList(final Double temperatureVal, final Long temperatureTime) {
         String formattedTime = convertTimestampToReadableDate(temperatureTime);
         String displayText = String.format("Temperature: %.2f°C, Time: %s", temperatureVal, formattedTime);
@@ -137,6 +140,7 @@ public class TemperatureActivity extends AppCompatActivity {
         Log.d(TAG, "Data added to list: " + displayText);
     }
 
+    // Method to convert timestamp to a readable date format
     private String convertTimestampToReadableDate(Long timestamp) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         Date date = new Date(timestamp);

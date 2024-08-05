@@ -4,14 +4,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true">
+    android:fillViewport="true"> <!-- Ensures the content fits the screen height -->
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="16dp"> <!-- Vertical layout for child views -->
 
+        <!-- TextInputLayout for Patient ID with an icon -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilPatientID"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -19,17 +20,18 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
             android:hint="Patient ID"
-            app:startIconDrawable="@drawable/ic_person">
+            app:startIconDrawable="@drawable/ic_person"> <!-- Icon before input field -->
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/patientIDInput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="text"
-            android:textColor="@android:color/black"/>
+                android:textColor="@android:color/black"/> <!-- Edit text for input -->
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- TextInputLayout for Last Visit Date with an icon -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilLastVisitDate"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -37,7 +39,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
             android:hint="Last Visit Date"
-            app:startIconDrawable="@drawable/ic_calendar">
+            app:startIconDrawable="@drawable/ic_calendar"> <!-- Icon before input field -->
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/patientLastVisitDateInput"
@@ -45,10 +47,11 @@
                 android:layout_height="wrap_content"
                 android:focusable="false"
                 android:clickable="true"
-                android:textColor="@android:color/black"/>
+                android:textColor="@android:color/black"/> <!-- Edit text for input -->
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Button to save patient information -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/savePatientButton"
             android:layout_width="match_parent"
@@ -56,6 +59,7 @@
             android:layout_marginTop="24dp"
             android:text="ADD" />
 
+        <!-- Button to navigate back -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/backButton"
             android:layout_width="match_parent"

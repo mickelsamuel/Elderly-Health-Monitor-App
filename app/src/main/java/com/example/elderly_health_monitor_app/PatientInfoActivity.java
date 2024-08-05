@@ -16,10 +16,13 @@ import com.google.firebase.database.ValueEventListener;
 
 public class PatientInfoActivity extends AppCompatActivity {
 
+    // UI elements to display patient information
     private TextView patientNameTextView, patientIDTextView, ageTextView, dobTextView, phoneNumberTextView, emergencyContactTextView, genderTextView, medicalCardTextView, lastVisitDateTextView;
     private TextView heartRateTextView, temperatureTextView, accelerometerTextView;
     private View heartRateStatus, temperatureStatus, accelerometerStatus;
     private CardView heartRateCard, temperatureCard, accelerometerCard;
+
+    // Firebase database reference for the patient
     private DatabaseReference patientRef;
     private String patientId;
 
@@ -28,6 +31,7 @@ public class PatientInfoActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_patient_info);
 
+        // Initialize UI elements
         patientNameTextView = findViewById(R.id.patientNameTextView);
         patientIDTextView = findViewById(R.id.patientIDTextView);
         ageTextView = findViewById(R.id.ageTextView);
@@ -49,8 +53,10 @@ public class PatientInfoActivity extends AppCompatActivity {
         temperatureCard = findViewById(R.id.temperatureCard);
         accelerometerCard = findViewById(R.id.accelerometerCard);
 
+        // Retrieve patient ID from intent
         patientId = getIntent().getStringExtra("patientId");
 
+        // Check if patient ID is provided
         if (patientId != null) {
             patientRef = FirebaseDatabase.getInstance().getReference("users").child(patientId);
             loadPatientDetails();
@@ -62,17 +68,20 @@ public class PatientInfoActivity extends AppCompatActivity {
         setupListeners();
     }
 
+    // Set up click listeners for the cards
     private void setupListeners() {
         heartRateCard.setOnClickListener(v -> startActivity(new Intent(PatientInfoActivity.this, HeartRateActivity.class)));
         temperatureCard.setOnClickListener(v -> startActivity(new Intent(PatientInfoActivity.this, TemperatureActivity.class)));
         accelerometerCard.setOnClickListener(v -> startActivity(new Intent(PatientInfoActivity.this, AccelerometerActivity.class)));
     }
 
+    // Load patient details from Firebase
     private void loadPatientDetails() {
         patientRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()) {
+                    // Retrieve patient data from the snapshot
                     String firstName = dataSnapshot.child("firstName").getValue(String.class);
                     String lastName = dataSnapshot.child("lastName").getValue(String.class);
                     Integer age = dataSnapshot.child("age").getValue(Integer.class);
@@ -83,6 +92,7 @@ public class PatientInfoActivity extends AppCompatActivity {
                     String medicalCard = dataSnapshot.child("medicalCard").getValue(String.class);
                     String lastVisitDate = dataSnapshot.child("lastVisitDate").getValue(String.class);
 
+                    // Set patient details to the TextViews
                     patientNameTextView.setText(firstName + " " + lastName);
                     patientIDTextView.setText(patientId);
                     ageTextView.setText("Age: " + (age != null ? age.toString() : "N/A"));
@@ -93,6 +103,7 @@ public class PatientInfoActivity extends AppCompatActivity {
                     medicalCardTextView.setText("Medical Card: " + medicalCard);
                     lastVisitDateTextView.setText("Last Visit Date: " + lastVisitDate);
 
+                    // Set dummy values for indicators
                     setHeartRateIndicator(75); // Dummy heart rate value
                     setTemperatureIndicator(37.0f); // Dummy temperature value
                     setAccelerometerIndicator(0.1f, 0.2f, 9.8f); // Dummy accelerometer values
@@ -108,6 +119,7 @@ public class PatientInfoActivity extends AppCompatActivity {
         });
     }
 
+    // Set heart rate indicator based on value
     private void setHeartRateIndicator(int heartRate) {
         heartRateTextView.setText("Heart Rate: " + heartRate + " bpm");
         if (heartRate < 60 || heartRate > 100) {
@@ -119,6 +131,7 @@ public class PatientInfoActivity extends AppCompatActivity {
         }
     }
 
+    // Set temperature indicator based on value
     private void setTemperatureIndicator(float temperature) {
         temperatureTextView.setText("Temperature: " + temperature + "°C");
         if (temperature < 36.5 || temperature > 37.5) {
@@ -130,6 +143,7 @@ public class PatientInfoActivity extends AppCompatActivity {
         }
     }
 
+    // Set accelerometer indicator based on values
     private void setAccelerometerIndicator(float x, float y, float z) {
         accelerometerTextView.setText("Accelerometer: X: " + x + ", Y: " + y + ", Z: " + z);
         if (Math.abs(x) > 1.0 || Math.abs(y) > 1.0 || Math.abs(z) > 10.0) {

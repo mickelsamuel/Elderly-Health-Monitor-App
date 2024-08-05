@@ -1,5 +1,8 @@
 <resources>
+    <!-- Application name -->
     <string name="app_name">Elderly Health Monitor App</string>
+
+    <!-- Sort options for sorting patient data -->
     <string-array name="sort_options">
         <item>Sort by Name</item>
         <item>Sort by Patient ID</item>
@@ -10,27 +13,53 @@
         <item>Sort by Age</item>
         <item>Sort by Last Visit Date</item>
     </string-array>
+
+    <!-- Placeholder for user's name in greeting message -->
     <string name="user_name_placeholder">Hello, [User Name]</string>
+
+    <!-- Placeholder for caretaker status summary -->
     <string name="status_summary_placeholder">Your caretaker is [Caretaker Name] ([Caretaker ID])</string>
+
+    <!-- Labels for various health metrics -->
     <string name="temperature">Temperature:</string>
     <string name="heart_rate">Heart Rate:</string>
     <string name="accelerometer">Accelerometer:</string>
+
+    <!-- Button label for calling for help -->
     <string name="call_for_help">Call for Help</string>
+
+    <!-- Button label for logging out -->
     <string name="log_out">Log Out</string>
+
+    <!-- Action bar label for settings -->
     <string name="action_settings">Settings</string>
+
+    <!-- Default notification channel ID -->
     <string name="default_notification_channel_id">patient_alerts_channel</string>
+
+    <!-- Form field labels -->
     <string name="first_name">First Name</string>
     <string name="last_name">Last Name</string>
     <string name="phone_number">Phone Number</string>
     <string name="medical_card">Medical Card</string>
     <string name="password">Password</string>
     <string name="license">License</string>
+
+    <!-- Button label for creating an account -->
     <string name="create_account">Create Account</string>
+
+    <!-- Label for patient information section -->
     <string name="patient_information">Patient Information</string>
+
+    <!-- Labels for additional patient details -->
     <string name="date_of_birth">Date of Birth</string>
     <string name="age">Age</string>
     <string name="gender">Gender</string>
     <string name="emergency_contact">Emergency Contact</string>
+
+    <!-- Description for the settings button -->
     <string name="settings_button_description">Settings</string>
+
+    <!-- Label for confirming password -->
     <string name="confirm_password">Confirm Password</string>
 </resources>

@@ -20,12 +20,14 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.messaging.FirebaseMessaging;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -58,6 +60,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_caretaker_monitor);
 
+        // Initialize UI components
         userNameText = findViewById(R.id.userNameText);
         statusSummary = findViewById(R.id.statusSummary);
         addPatientButton = findViewById(R.id.addPatientButton);
@@ -66,6 +69,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         settingsButton = findViewById(R.id.settingsButton);
         patientContainer = findViewById(R.id.patientContainer);
 
+        // Get caretaker details from the intent
         Intent intent = getIntent();
         String caretakerName = intent.getStringExtra("caretakerName");
         caretakerId = intent.getStringExtra("caretakerId");
@@ -78,13 +82,16 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         // Load caretaker's patients
         loadCaretakerPatients();
 
+        // Initialize Firebase database reference
         databaseRef = FirebaseDatabase.getInstance().getReference("users");
 
+        // Set up the sort spinner with options
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
                 R.array.sort_options, R.layout.spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         sortSpinner.setAdapter(adapter);
 
+        // Set OnClickListener for add patient button
         addPatientButton.setOnClickListener(v -> {
             Log.d(TAG, "addPatientButton onClick: caretakerId=" + caretakerId + ", caretakerName=" + caretakerName + ", caretakerPhoneNumber=" + caretakerPhoneNumber);
             Intent intent1 = new Intent(CaretakerMonitorActivity.this, AddPatientActivity.class);
@@ -94,6 +101,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             startActivityForResult(intent1, 1);
         });
 
+        // Set OnItemSelectedListener for sort spinner
         sortSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -105,30 +113,38 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             }
         });
 
+        // Set OnClickListener for toggle sort order button
         toggleSortOrderButton.setOnClickListener(v -> {
             isAscending = !isAscending;
             int selectedPosition = sortSpinner.getSelectedItemPosition();
             sortPatients(selectedPosition);
         });
 
+        // Set OnClickListener for settings button
         settingsButton.setOnClickListener(v -> {
             Intent settingsIntent = new Intent(CaretakerMonitorActivity.this, CaretakerSettingsActivity.class);
             settingsIntent.putExtra("caretakerLicense", caretakerId);
             startActivity(settingsIntent);
         });
 
+        // Subscribe to Firebase messaging topic for patient alerts
         FirebaseMessaging.getInstance().subscribeToTopic(caretakerId)
                 .addOnCompleteListener(task -> {
                     String msg = task.isSuccessful() ? "Subscribed to patient alerts" : "Subscription failed";
                     Log.d(TAG, msg);
                 });
 
+        // Register receiver for font size updates
         registerReceiver(new FontSizeUpdateReceiver(), new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE"));
 
+        // Set initial font size from shared preferences
         float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
         updateFontSize(fontSize);
     }
 
+    /**
+     * Load the patients assigned to the caretaker
+     */
     private void loadCaretakerPatients() {
         DatabaseReference caretakerRef = FirebaseDatabase.getInstance().getReference("users").child(caretakerId);
         caretakerRef.child("patientIDs").addListenerForSingleValueEvent(new ValueEventListener() {
@@ -159,13 +175,16 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Load the details of patients
+     * @param patientIDs List of patient IDs
+     */
     private void loadPatientDetails(List<String> patientIDs) {
         patients.clear();
         final int[] patientsLoaded = {0};
         final int totalPatients = patientIDs.size();
 
         DatabaseReference usersRef = FirebaseDatabase.getInstance().getReference("users");
-        //Log.d(TAG, "Fetching patient details from path: " + usersRef.getPath().toString());
 
         for (String patientId : patientIDs) {
             Log.d(TAG, "Fetching details for patient ID: " + patientId);
@@ -197,6 +216,9 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Update the UI with patient details
+     */
     private void updateUI() {
         runOnUiThread(() -> {
             Log.d(TAG, "Updating UI with " + patients.size() + " patients");
@@ -208,6 +230,9 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Update the views for patients
+     */
     private void updatePatientViews() {
         Log.d(TAG, "Updating patient views");
         patientContainer.removeAllViews();
@@ -216,6 +241,10 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Add a card view for a patient
+     * @param patient The patient to display
+     */
     private void addPatientCard(Patient patient) {
         Log.d(TAG, "Adding card for patient: " + patient.getFirstName() + " " + patient.getLastName());
         View patientCardView = LayoutInflater.from(this).inflate(R.layout.patient_card, patientContainer, false);
@@ -241,12 +270,20 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         Log.d(TAG, "Patient card added for: " + patient.getFirstName() + " " + patient.getLastName());
     }
 
+    /**
+     * Show detailed information about a patient
+     * @param patient The patient to show information for
+     */
     private void showPatientInfo(Patient patient) {
         Intent intent = new Intent(this, PatientInfoActivity.class);
         intent.putExtra("patientId", patient.getId());
         startActivity(intent);
     }
 
+    /**
+     * Sort the list of patients based on the selected criteria
+     * @param position The selected sorting criteria position
+     */
     private void sortPatients(int position) {
         Comparator<Patient> comparator;
 
@@ -287,6 +324,10 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         updatePatientViews();
     }
 
+    /**
+     * Remove a patient from the caretaker's list
+     * @param patient The patient to remove
+     */
     private void removePatient(Patient patient) {
         if (patient == null) {
             Log.e(TAG, "removePatient: Patient object is null");
@@ -390,6 +431,11 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Add a patient to the caretaker's list in Firebase
+     * @param caretakerId The ID of the caretaker
+     * @param patientId The ID of the patient
+     */
     private void addPatientToCaretaker(String caretakerId, String patientId) {
         DatabaseReference caretakerRef = FirebaseDatabase.getInstance().getReference("users").child(caretakerId);
         caretakerRef.child("patientIDs").addListenerForSingleValueEvent(new ValueEventListener() {
@@ -429,6 +475,10 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         updateFontSize(fontSize);
     }
 
+    /**
+     * Update the font size of UI components
+     * @param fontSize The font size to set
+     */
     private void updateFontSize(float fontSize) {
         userNameText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
         statusSummary.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
@@ -459,6 +509,9 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * BroadcastReceiver to update font size based on settings
+     */
     private class FontSizeUpdateReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {

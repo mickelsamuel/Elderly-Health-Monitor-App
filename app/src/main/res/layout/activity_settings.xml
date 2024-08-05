@@ -12,6 +12,7 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- Font Size Label -->
         <TextView
             android:id="@+id/text_font_size_label"
             android:layout_width="wrap_content"
@@ -21,6 +22,7 @@
             android:textStyle="bold"
             android:layout_marginBottom="8dp"/>
 
+        <!-- SeekBar for Font Size -->
         <SeekBar
             android:id="@+id/seekBar_font_size"
             android:layout_width="match_parent"
@@ -29,6 +31,7 @@
             android:progress="18"
             android:layout_marginBottom="16dp"/>
 
+        <!-- Sample Text Display -->
         <TextView
             android:id="@+id/text_sample"
             android:layout_width="wrap_content"
@@ -37,6 +40,7 @@
             android:textSize="18sp"
             android:layout_marginBottom="24dp"/>
 
+        <!-- Edit Account Information Label -->
         <TextView
             android:id="@+id/text_edit_account_info"
             android:layout_width="wrap_content"
@@ -46,6 +50,7 @@
             android:textStyle="bold"
             android:layout_marginBottom="16dp"/>
 
+        <!-- First Name Input Field -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilFirstName"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -65,6 +70,7 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Last Name Input Field -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilLastName"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -84,6 +90,7 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Phone Number Input Field -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilPhoneNumber"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -103,6 +110,7 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Emergency Contact Input Field -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilEmergencyContact"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -122,6 +130,7 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Medical Card Input Field -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilMedicalCard"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -141,6 +150,7 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- User ID Input Field -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilUserId"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -163,6 +173,7 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Save Changes Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonSaveChanges"
             android:layout_width="match_parent"
@@ -170,6 +181,7 @@
             android:layout_marginTop="24dp"
             android:text="Save Changes"/>
 
+        <!-- Change Password Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonChangePassword"
             android:layout_width="match_parent"
@@ -177,6 +189,7 @@
             android:layout_marginTop="8dp"
             android:text="Change Password"/>
 
+        <!-- Delete Account Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonDeleteAccount"
             android:layout_width="match_parent"
@@ -185,6 +198,7 @@
             android:text="Delete Account"
             app:backgroundTint="@color/design_default_color_error"/>
 
+        <!-- Logout Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonLogout"
             android:layout_width="match_parent"

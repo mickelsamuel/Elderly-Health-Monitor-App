@@ -21,7 +21,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
-        // Handle FCM messages here.
+        // Handle FCM (Firebase Cloud Messaging) messages here.
         if (remoteMessage.getData().size() > 0) {
             String title = remoteMessage.getData().get("title");
             String message = remoteMessage.getData().get("message");
@@ -35,13 +35,17 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         // You can send the token to your server if needed
     }
 
+    // Method to send a notification
     private void sendNotification(String title, String messageBody) {
         Intent intent = new Intent(this, CaretakerMonitorActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_MUTABLE);
 
         String channelId = getString(R.string.default_notification_channel_id);
         Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+
+        // Build the notification
         NotificationCompat.Builder notificationBuilder =
                 new NotificationCompat.Builder(this, channelId)
                         .setSmallIcon(R.drawable.ic_notification)
@@ -62,6 +66,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             notificationManager.createNotificationChannel(channel);
         }
 
+        // Notify the user with the built notification
         notificationManager.notify(0, notificationBuilder.build());
     }
 }

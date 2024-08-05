@@ -27,10 +27,13 @@ import java.util.Objects;
 
 public class PatientFragment extends Fragment {
 
+    // UI elements for input fields and buttons
     private TextInputLayout tilFirstName, tilLastName, tilPhoneNumber, tilMedicalCard, tilPassword, tilConfirmPassword, tilDob, tilAge, tilGender, tilEmergencyContact;
     private TextInputEditText editTextFirstName, editTextLastName, editTextPhoneNumber, editTextMedicalCard, editTextPassword, editTextConfirmPassword, editTextDob, editTextAge, editTextEmergencyContact;
     private AutoCompleteTextView editTextGender;
     private MaterialButton buttonCreateUser;
+
+    // Firebase database reference
     private FirebaseDatabase firebaseDatabase;
     private DatabaseReference usersRef;
 
@@ -38,16 +41,23 @@ public class PatientFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_patient, container, false);
 
+        // Initialize UI elements
         initializeViews(view);
+        // Set up Firebase reference
         setupFirebase();
+        // Set up gender dropdown menu
         setupGenderDropdown();
+        // Set up date picker for DOB
         setupDatePicker();
+        // Set up create user button click listener
         setupCreateUserButton();
+        // Set up toolbar navigation
         setupToolbar(view);
 
         return view;
     }
 
+    // Method to initialize UI elements
     private void initializeViews(View view) {
         tilFirstName = view.findViewById(R.id.tilFirstName);
         tilLastName = view.findViewById(R.id.tilLastName);
@@ -74,21 +84,25 @@ public class PatientFragment extends Fragment {
         buttonCreateUser = view.findViewById(R.id.buttonCreateUser);
     }
 
+    // Method to set up Firebase reference
     private void setupFirebase() {
         firebaseDatabase = FirebaseDatabase.getInstance();
         usersRef = firebaseDatabase.getReference("users");
     }
 
+    // Method to set up gender dropdown menu
     private void setupGenderDropdown() {
         String[] genderOptions = {"Male", "Female", "Other", "Prefer not to say"};
         ArrayAdapter<String> genderAdapter = new ArrayAdapter<>(requireContext(), R.layout.list_item, genderOptions);
         editTextGender.setAdapter(genderAdapter);
     }
 
+    // Method to set up date picker for DOB
     private void setupDatePicker() {
         editTextDob.setOnClickListener(v -> showDatePickerDialog());
     }
 
+    // Method to show date picker dialog
     private void showDatePickerDialog() {
         Calendar calendar = Calendar.getInstance();
         int year = calendar.get(Calendar.YEAR);
@@ -107,6 +121,7 @@ public class PatientFragment extends Fragment {
         datePickerDialog.show();
     }
 
+    // Method to calculate age based on selected DOB
     private void calculateAge(int year, int month, int day) {
         Calendar dob = Calendar.getInstance();
         Calendar today = Calendar.getInstance();
@@ -127,10 +142,12 @@ public class PatientFragment extends Fragment {
         }
     }
 
+    // Method to set up create user button click listener
     private void setupCreateUserButton() {
         buttonCreateUser.setOnClickListener(v -> validateAndCreateUser());
     }
 
+    // Method to set up toolbar navigation
     private void setupToolbar(View view) {
         MaterialToolbar topAppBar = view.findViewById(R.id.topAppBar);
         topAppBar.setNavigationOnClickListener(v -> {
@@ -139,12 +156,14 @@ public class PatientFragment extends Fragment {
         });
     }
 
+    // Method to validate input fields and create user account
     private void validateAndCreateUser() {
         if (validateInputs()) {
             checkUniqueFields();
         }
     }
 
+    // Method to validate input fields
     private boolean validateInputs() {
         boolean isValid = true;
 
@@ -226,6 +245,7 @@ public class PatientFragment extends Fragment {
         return isValid;
     }
 
+    // Method to check if the phone number and medical card are unique
     private void checkUniqueFields() {
         final String phoneNumber = Objects.requireNonNull(editTextPhoneNumber.getText()).toString().trim();
         final String medicalCard = Objects.requireNonNull(editTextMedicalCard.getText()).toString().trim();
@@ -261,6 +281,7 @@ public class PatientFragment extends Fragment {
         });
     }
 
+    // Method to create user account in Firebase
     private void createUserAccount() {
         String firstName = Objects.requireNonNull(editTextFirstName.getText()).toString().trim();
         String lastName = Objects.requireNonNull(editTextLastName.getText()).toString().trim();
@@ -287,6 +308,7 @@ public class PatientFragment extends Fragment {
         }
     }
 
+    // Method to save login state in SharedPreferences
     private void saveLoginState(String role, String firstName, String lastName, String userId) {
         SharedPreferences prefs = getActivity().getSharedPreferences("LoginPrefs", getContext().MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
@@ -298,6 +320,7 @@ public class PatientFragment extends Fragment {
         editor.apply();
     }
 
+    // Method to navigate to the main activity
     private void navigateToMainActivity(String role, String firstName, String lastName, String userId) {
         Intent intent;
         if ("caretaker".equals(role)) {
@@ -313,10 +336,12 @@ public class PatientFragment extends Fragment {
         getActivity().finish();
     }
 
+    // Method to show an error message
     private void showError(String message) {
         Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
     }
 
+    // User class to hold user details
     public static class User {
         public String id;
         public String firstName;
@@ -330,9 +355,11 @@ public class PatientFragment extends Fragment {
         public String gender;
         public String emergencyContact;
 
+        // Default constructor required for calls to DataSnapshot.getValue(User.class)
         public User() {
         }
 
+        // Parameterized constructor to initialize user details
         public User(String id, String firstName, String lastName, String phoneNumber, String medicalCard, String password, String role, String dob, int age, String gender, String emergencyContact) {
             this.id = id;
             this.firstName = firstName;

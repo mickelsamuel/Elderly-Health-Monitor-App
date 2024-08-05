@@ -46,21 +46,26 @@ public class AddPatientActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_patient);
 
+        // Initialize UI components
         patientIDInput = findViewById(R.id.patientIDInput);
         patientLastVisitDateInput = findViewById(R.id.patientLastVisitDateInput);
         savePatientButton = findViewById(R.id.savePatientButton);
         backButton = findViewById(R.id.backButton);
 
+        // Get Firebase database reference
         databaseRef = FirebaseDatabase.getInstance().getReference("users");
 
+        // Retrieve caretaker details from intent
         caretakerID = getIntent().getStringExtra("caretakerID");
         caretakerName = getIntent().getStringExtra("caretakerName");
         caretakerPhoneNumber = getIntent().getStringExtra("caretakerPhoneNumber");
 
         Log.d(TAG, "onCreate: Caretaker details - ID: " + caretakerID + ", Name: " + caretakerName + ", Phone: " + caretakerPhoneNumber);
 
+        // Set OnClickListener to show date picker dialog
         patientLastVisitDateInput.setOnClickListener(v -> showDatePickerDialog());
 
+        // Set OnClickListener for save patient button
         savePatientButton.setOnClickListener(v -> {
             String patientID = patientIDInput.getText().toString();
             String lastVisitDate = patientLastVisitDateInput.getText().toString();
@@ -73,13 +78,16 @@ public class AddPatientActivity extends AppCompatActivity {
             fetchAndValidatePatient(patientID, lastVisitDate);
         });
 
+        // Set OnClickListener for back button
         backButton.setOnClickListener(v -> {
             setResult(RESULT_CANCELED);
             finish();
         });
 
+        // Register broadcast receiver for font size updates
         registerReceiver(new FontSizeUpdateReceiver(), new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE"));
 
+        // Set initial font size from shared preferences
         float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
         updateFontSize(fontSize);
     }
@@ -87,10 +95,15 @@ public class AddPatientActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        // Update font size when activity resumes
         float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
         updateFontSize(fontSize);
     }
 
+    /**
+     * Update the font size of UI components
+     * @param fontSize The font size to set
+     */
     private void updateFontSize(float fontSize) {
         patientIDInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
         patientLastVisitDateInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
@@ -98,6 +111,9 @@ public class AddPatientActivity extends AppCompatActivity {
         backButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
     }
 
+    /**
+     * Show a date picker dialog to select the last visit date
+     */
     private void showDatePickerDialog() {
         Calendar calendar = Calendar.getInstance();
         int year = calendar.get(Calendar.YEAR);
@@ -117,6 +133,11 @@ public class AddPatientActivity extends AppCompatActivity {
         datePickerDialog.show();
     }
 
+    /**
+     * Fetch and validate patient details from Firebase
+     * @param patientID The ID of the patient
+     * @param lastVisitDate The last visit date of the patient
+     */
     private void fetchAndValidatePatient(final String patientID, final String lastVisitDate) {
         Log.d(TAG, "fetchAndValidatePatient: Patient ID: " + patientID + ", Last Visit Date: " + lastVisitDate + ", Caretaker ID: " + caretakerID + ", Caretaker Name: " + caretakerName + ", Caretaker Phone Number: " + caretakerPhoneNumber);
 
@@ -186,6 +207,12 @@ public class AddPatientActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Add patient ID to caretaker's list of patients in Firebase
+     * @param patientID The ID of the patient
+     * @param firstName The first name of the patient
+     * @param lastName The last name of the patient
+     */
     private void addPatientToCaretaker(final String patientID, final String firstName, final String lastName) {
         databaseRef.child(caretakerID).child("patientIDs").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -226,6 +253,9 @@ public class AddPatientActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * BroadcastReceiver to update font size based on settings
+     */
     private class FontSizeUpdateReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
