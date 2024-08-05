@@ -226,6 +226,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         TextView patientTemperatureText = patientCardView.findViewById(R.id.patientTemperatureText);
         TextView patientAccelerometerText = patientCardView.findViewById(R.id.patientAccelerometerText);
         Button removePatientButton = patientCardView.findViewById(R.id.removePatientButton);
+        Button infoPatientButton = patientCardView.findViewById(R.id.infoPatientButton);
 
         patientNameTextView.setText(patient.getFirstName() != null ? patient.getFirstName() + " " + patient.getLastName() : "N/A");
         patientIDTextView.setText(patient.getId() != null ? patient.getId() : "N/A");
@@ -234,9 +235,16 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         patientAccelerometerText.setText("Accelerometer: X: 0.0, Y: 0.0, Z: 0.0");
 
         removePatientButton.setOnClickListener(v -> removePatient(patient));
+        infoPatientButton.setOnClickListener(v -> showPatientInfo(patient));
 
         patientContainer.addView(patientCardView);
         Log.d(TAG, "Patient card added for: " + patient.getFirstName() + " " + patient.getLastName());
+    }
+
+    private void showPatientInfo(Patient patient) {
+        Intent intent = new Intent(this, PatientInfoActivity.class);
+        intent.putExtra("patientId", patient.getId());
+        startActivity(intent);
     }
 
     private void sortPatients(int position) {
