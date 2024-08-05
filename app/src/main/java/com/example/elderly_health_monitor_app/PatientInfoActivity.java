@@ -1,8 +1,14 @@
 package com.example.elderly_health_monitor_app;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
+import android.util.Log;
+import android.util.TypedValue;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
@@ -21,10 +27,12 @@ public class PatientInfoActivity extends AppCompatActivity {
     private TextView heartRateTextView, temperatureTextView, accelerometerTextView;
     private View heartRateStatus, temperatureStatus, accelerometerStatus;
     private CardView heartRateCard, temperatureCard, accelerometerCard;
+    private Button backButton;
 
     // Firebase database reference for the patient
     private DatabaseReference patientRef;
     private String patientId;
+    private String caretakerId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,9 +60,11 @@ public class PatientInfoActivity extends AppCompatActivity {
         heartRateCard = findViewById(R.id.heartRateCard);
         temperatureCard = findViewById(R.id.temperatureCard);
         accelerometerCard = findViewById(R.id.accelerometerCard);
+        backButton = findViewById(R.id.backButton);
 
         // Retrieve patient ID from intent
         patientId = getIntent().getStringExtra("patientId");
+        caretakerId = getIntent().getStringExtra("caretakerId");
 
         // Check if patient ID is provided
         if (patientId != null) {
@@ -66,6 +76,7 @@ public class PatientInfoActivity extends AppCompatActivity {
         }
 
         setupListeners();
+        setupFirebaseListeners();
     }
 
     // Set up click listeners for the cards
@@ -73,6 +84,12 @@ public class PatientInfoActivity extends AppCompatActivity {
         heartRateCard.setOnClickListener(v -> startActivity(new Intent(PatientInfoActivity.this, HeartRateActivity.class)));
         temperatureCard.setOnClickListener(v -> startActivity(new Intent(PatientInfoActivity.this, TemperatureActivity.class)));
         accelerometerCard.setOnClickListener(v -> startActivity(new Intent(PatientInfoActivity.this, AccelerometerActivity.class)));
+        backButton.setOnClickListener(v -> {
+            Intent intent = new Intent(PatientInfoActivity.this, CaretakerMonitorActivity.class);
+            intent.putExtra("caretakerId", caretakerId); // Ensure caretakerId is passed back
+            startActivity(intent);
+            finish(); // Optional: finish this activity to remove it from the back stack
+        });
     }
 
     // Load patient details from Firebase
@@ -84,7 +101,8 @@ public class PatientInfoActivity extends AppCompatActivity {
                     // Retrieve patient data from the snapshot
                     String firstName = dataSnapshot.child("firstName").getValue(String.class);
                     String lastName = dataSnapshot.child("lastName").getValue(String.class);
-                    Integer age = dataSnapshot.child("age").getValue(Integer.class);
+                    Long ageLong = dataSnapshot.child("age").getValue(Long.class);
+                    Integer age = ageLong != null ? ageLong.intValue() : null;
                     String dob = dataSnapshot.child("dob").getValue(String.class);
                     String phoneNumber = dataSnapshot.child("phoneNumber").getValue(String.class);
                     String emergencyContact = dataSnapshot.child("emergencyContact").getValue(String.class);
@@ -153,5 +171,52 @@ public class PatientInfoActivity extends AppCompatActivity {
         } else {
             accelerometerStatus.setBackgroundResource(R.drawable.indicator_yellow);
         }
+    }
+
+    /**
+     * Set up Firebase listeners for real-time updates
+     */
+    private void setupFirebaseListeners() {
+        patientRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    // Retrieve patient data from the snapshot
+                    String firstName = dataSnapshot.child("firstName").getValue(String.class);
+                    String lastName = dataSnapshot.child("lastName").getValue(String.class);
+                    Long ageLong = dataSnapshot.child("age").getValue(Long.class);
+                    Integer age = ageLong != null ? ageLong.intValue() : null;
+                    String dob = dataSnapshot.child("dob").getValue(String.class);
+                    String phoneNumber = dataSnapshot.child("phoneNumber").getValue(String.class);
+                    String emergencyContact = dataSnapshot.child("emergencyContact").getValue(String.class);
+                    String gender = dataSnapshot.child("gender").getValue(String.class);
+                    String medicalCard = dataSnapshot.child("medicalCard").getValue(String.class);
+                    String lastVisitDate = dataSnapshot.child("lastVisitDate").getValue(String.class);
+
+                    // Set patient details to the TextViews
+                    patientNameTextView.setText(firstName + " " + lastName);
+                    patientIDTextView.setText(patientId);
+                    ageTextView.setText("Age: " + (age != null ? age.toString() : "N/A"));
+                    dobTextView.setText("DOB: " + dob);
+                    phoneNumberTextView.setText("Phone: " + phoneNumber);
+                    emergencyContactTextView.setText("Emergency Contact: " + emergencyContact);
+                    genderTextView.setText("Gender: " + gender);
+                    medicalCardTextView.setText("Medical Card: " + medicalCard);
+                    lastVisitDateTextView.setText("Last Visit Date: " + lastVisitDate);
+
+                    // Set dummy values for indicators
+                    setHeartRateIndicator(75); // Dummy heart rate value
+                    setTemperatureIndicator(37.0f); // Dummy temperature value
+                    setAccelerometerIndicator(0.1f, 0.2f, 9.8f); // Dummy accelerometer values
+                } else {
+                    Toast.makeText(PatientInfoActivity.this, "Patient data not found", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                Toast.makeText(PatientInfoActivity.this, "Failed to load patient data", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

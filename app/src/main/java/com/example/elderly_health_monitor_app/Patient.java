@@ -22,6 +22,10 @@ public class Patient {
     private String phoneNumber;
     private String id;
 
+    private double accelerometerX;
+    private double accelerometerY;
+    private double accelerometerZ;
+
     // Default constructor required for calls to DataSnapshot.getValue(Patient.class)
     public Patient() {
     }
@@ -47,6 +51,10 @@ public class Patient {
         this.password = "";
         this.phoneNumber = "";
         this.id = patientID;
+
+        this.accelerometerX = 0.0;
+        this.accelerometerY = 0.0;
+        this.accelerometerZ = 0.0;
     }
 
     // Getters and setters for all fields
@@ -132,31 +140,27 @@ public class Patient {
 
     // Methods to get individual accelerometer readings
     public double getAccelerometerX() {
-        return parseAccelerometerValue(0);
+        return accelerometerX;
+    }
+
+    public void setAccelerometerX(double accelerometerX) {
+        this.accelerometerX = accelerometerX;
     }
 
     public double getAccelerometerY() {
-        return parseAccelerometerValue(1);
+        return accelerometerY;
+    }
+
+    public void setAccelerometerY(double accelerometerY) {
+        this.accelerometerY = accelerometerY;
     }
 
     public double getAccelerometerZ() {
-        return parseAccelerometerValue(2);
+        return accelerometerZ;
     }
 
-    // Helper method to parse accelerometer readings from a comma-separated string
-    private double parseAccelerometerValue(int index) {
-        if (accelerometerReading == null || accelerometerReading.isEmpty()) {
-            return 0.0;
-        }
-        String[] values = accelerometerReading.split(",");
-        if (values.length > index) {
-            try {
-                return Double.parseDouble(values[index].trim());
-            } catch (NumberFormatException e) {
-                e.printStackTrace();
-            }
-        }
-        return 0.0;
+    public void setAccelerometerZ(double accelerometerZ) {
+        this.accelerometerZ = accelerometerZ;
     }
 
     public String getCaretakerID() {
