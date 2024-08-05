@@ -1,14 +1,22 @@
 package com.example.elderly_health_monitor_app;
 
+import android.Manifest;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.database.DataSnapshot;
@@ -31,6 +39,12 @@ public class LoginActivity extends AppCompatActivity {
     private FirebaseDatabase firebaseDatabase;
     private DatabaseReference usersRef;
 
+    private static final String CHANNEL_ID = "push_notifications";
+    private ActivityResultLauncher<String> ARL;
+    public static PushNotifications pn;
+
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -45,6 +59,24 @@ public class LoginActivity extends AppCompatActivity {
         firebaseDatabase = FirebaseDatabase.getInstance();
         usersRef = firebaseDatabase.getReference("users");
 
+        createNotificationChannel();
+
+        ARL = registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+            if (granted) {
+                pn.sendNotification(LoginActivity.this, "NOTIFICATIONS ARE ACTIVE", "You will receive notifications");
+            } else {
+                Toast.makeText(LoginActivity.this, "Post notification permission not granted", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        pn = new PushNotifications(ARL); // Initialize after ARL is set up
+
+        // Request notification permission if not already granted
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            ARL.launch(Manifest.permission.POST_NOTIFICATIONS);
+        } else {
+            pn.sendNotification(LoginActivity.this, "NOTIFICATIONS ARE ACTIVE", "You will receive notifications");
+        }
         findViewById(R.id.buttonCreateAccount).setOnClickListener(v -> {
             startActivity(new Intent(LoginActivity.this, AccountCreationActivity.class));
         });
@@ -58,6 +90,21 @@ public class LoginActivity extends AppCompatActivity {
             String lastName = prefs.getString("lastName", "");
             String userId = prefs.getString("userId", "");
             navigateToActivity(role, firstName, lastName, userId);
+        }
+    }
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = "Global Notifications";
+            String description = "Channel for global notifications";
+            int importance = NotificationManager.IMPORTANCE_HIGH; // Set to high for visibility
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            channel.setDescription(description);
+
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(channel);
+            }
         }
     }
 
