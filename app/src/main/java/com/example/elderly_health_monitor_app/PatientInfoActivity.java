@@ -1,7 +1,11 @@
 package com.example.elderly_health_monitor_app;
 
+import android.content.Intent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.IntentFilter;
+import static com.example.elderly_health_monitor_app.LoginActivity.pn;
+
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
@@ -142,10 +146,12 @@ public class PatientInfoActivity extends AppCompatActivity {
         heartRateTextView.setText("Heart Rate: " + heartRate + " bpm");
         if (heartRate < 60 || heartRate > 100) {
             heartRateStatus.setBackgroundResource(R.drawable.indicator_red);
+            pn.sendNotification(this, patientNameTextView.getText() + " HEART RATE CRITICAL", "Heart Rate: " + heartRate);
         } else if (heartRate >= 60 && heartRate <= 100) {
             heartRateStatus.setBackgroundResource(R.drawable.indicator_green);
         } else {
             heartRateStatus.setBackgroundResource(R.drawable.indicator_yellow);
+            pn.sendNotification(this, patientNameTextView.getText() + " HEART RATE WARNING", "Heart Rate: " + heartRate);
         }
     }
 
@@ -154,10 +160,12 @@ public class PatientInfoActivity extends AppCompatActivity {
         temperatureTextView.setText("Temperature: " + temperature + "°C");
         if (temperature < 36.5 || temperature > 37.5) {
             temperatureStatus.setBackgroundResource(R.drawable.indicator_red);
+            pn.sendNotification(this, patientNameTextView.getText() + " TEMPERATURE CRITICAL", "Temperature: " + temperature);
         } else if (temperature >= 36.5 && temperature <= 37.5) {
             temperatureStatus.setBackgroundResource(R.drawable.indicator_green);
         } else {
             temperatureStatus.setBackgroundResource(R.drawable.indicator_yellow);
+            pn.sendNotification(this, patientNameTextView.getText() + " TEMPERATURE WARNING", "Temperature: " + temperature);
         }
     }
 
@@ -166,10 +174,13 @@ public class PatientInfoActivity extends AppCompatActivity {
         accelerometerTextView.setText("Accelerometer: X: " + x + ", Y: " + y + ", Z: " + z);
         if (Math.abs(x) > 1.0 || Math.abs(y) > 1.0 || Math.abs(z) > 10.0) {
             accelerometerStatus.setBackgroundResource(R.drawable.indicator_red);
+            pn.sendNotification(this, patientNameTextView.getText() + " FALL DETECTED", "");
         } else if (Math.abs(x) <= 1.0 && Math.abs(y) <= 1.0 && Math.abs(z) <= 10.0) {
             accelerometerStatus.setBackgroundResource(R.drawable.indicator_green);
         } else {
             accelerometerStatus.setBackgroundResource(R.drawable.indicator_yellow);
+            pn.sendNotification(this, patientNameTextView.getText() + " FALL POSSIBLE", "");
+
         }
     }
 

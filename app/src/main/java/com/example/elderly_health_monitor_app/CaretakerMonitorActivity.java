@@ -161,7 +161,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
                 });
 
         // Register receiver for font size updates
-        registerReceiver(new FontSizeUpdateReceiver(), new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE"));
+      //  registerReceiver(new FontSizeUpdateReceiver(), new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE"));
 
         // Set initial font size from shared preferences
         float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);

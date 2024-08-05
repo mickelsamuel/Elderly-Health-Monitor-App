@@ -91,9 +91,10 @@ public class MonitorActivity extends AppCompatActivity {
         userRef = firebaseDatabase.getReference("users").child(userId);
         setupListeners();
 
-        // Register broadcast receiver for font size updates
-        IntentFilter filter = new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE");
-        registerReceiver(new FontSizeUpdateReceiver(), filter);
+// Register broadcast receiver for font size updates
+IntentFilter filter = new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE");
+registerReceiver(new FontSizeUpdateReceiver(), filter);
+
 
         // Set up Firebase listeners for real-time updates
         setupFirebaseListeners();
@@ -375,11 +376,11 @@ public class MonitorActivity extends AppCompatActivity {
     /**
      * Broadcast receiver for updating font size
      */
-    private class FontSizeUpdateReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            float fontSize = intent.getFloatExtra("font_size", 18);
-            updateFontSize(fontSize);
-        }
-    }
+//    private class FontSizeUpdateReceiver extends BroadcastReceiver {
+//        @Override
+//        public void onReceive(Context context, Intent intent) {
+//            float fontSize = intent.getFloatExtra("font_size", 18);
+//            updateFontSize(fontSize);
+//        }
+//    }
 }
