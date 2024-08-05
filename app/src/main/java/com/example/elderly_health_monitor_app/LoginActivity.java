@@ -17,6 +17,8 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.util.ArrayList;
+
 public class LoginActivity extends AppCompatActivity {
     private static final String TAG = "LoginActivity";
 
@@ -39,11 +41,8 @@ public class LoginActivity extends AppCompatActivity {
         firebaseDatabase = FirebaseDatabase.getInstance();
         usersRef = firebaseDatabase.getReference("users");
 
-        findViewById(R.id.buttonCreateAccount).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(LoginActivity.this, AccountCreationActivity.class));
-            }
+        findViewById(R.id.buttonCreateAccount).setOnClickListener(v -> {
+            startActivity(new Intent(LoginActivity.this, AccountCreationActivity.class));
         });
 
         // Check if user is already logged in
@@ -115,7 +114,7 @@ public class LoginActivity extends AppCompatActivity {
         editor.apply();
 
         if ("caretaker".equals(role)) {
-            startCaretakerActivity(firstName, lastName, userId, phoneNumber);
+            loadCaretakerPatientsAndStartActivity(firstName, lastName, userId, phoneNumber);
         } else if ("user".equals(role)) {
             startUserActivity(firstName, lastName, userId);
         } else {
@@ -123,12 +122,35 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
-    private void startCaretakerActivity(String firstName, String lastName, String userId, String phoneNumber) {
+    private void loadCaretakerPatientsAndStartActivity(String firstName, String lastName, String userId, String phoneNumber) {
+        DatabaseReference caretakerRef = usersRef.child(userId).child("patientIDs");
+        caretakerRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                ArrayList<String> patientIDs = new ArrayList<>();
+                if (dataSnapshot.exists()) {
+                    for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                        patientIDs.add(snapshot.getValue(String.class));
+                    }
+                }
+                Log.d(TAG, "Patient IDs found: " + patientIDs);
+                startCaretakerActivity(firstName, lastName, userId, phoneNumber, patientIDs);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                Log.e(TAG, "Failed to load caretaker's patient list: " + databaseError.getMessage());
+            }
+        });
+    }
+
+    private void startCaretakerActivity(String firstName, String lastName, String userId, String phoneNumber, ArrayList<String> patientIDs) {
         Log.d(TAG, "startCaretakerActivity: firstName=" + firstName + ", lastName=" + lastName + ", userId=" + userId + ", phoneNumber=" + phoneNumber);
         Intent intent = new Intent(this, CaretakerMonitorActivity.class);
         intent.putExtra("caretakerName", firstName + " " + lastName);
         intent.putExtra("caretakerId", userId);
         intent.putExtra("caretakerPhoneNumber", phoneNumber);
+        intent.putStringArrayListExtra("patientIDs", patientIDs);
         startActivity(intent);
         finish();
     }
@@ -152,7 +174,7 @@ public class LoginActivity extends AppCompatActivity {
         String phoneNumber = prefs.getString("phoneNumber", "");
 
         if ("caretaker".equals(role)) {
-            startCaretakerActivity(firstName, lastName, userId, phoneNumber);
+            loadCaretakerPatientsAndStartActivity(firstName, lastName, userId, phoneNumber);
         } else if ("user".equals(role)) {
             startUserActivity(firstName, lastName, userId);
         } else {
@@ -168,3 +190,4 @@ public class LoginActivity extends AppCompatActivity {
         finish();
     }
 }
+//EOF

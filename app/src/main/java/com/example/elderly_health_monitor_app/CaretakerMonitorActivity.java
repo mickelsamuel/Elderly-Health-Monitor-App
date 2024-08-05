@@ -18,15 +18,14 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.messaging.FirebaseMessaging;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -72,11 +71,12 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         caretakerId = intent.getStringExtra("caretakerId");
         caretakerPhoneNumber = intent.getStringExtra("caretakerPhoneNumber");
 
-        loadPatients(caretakerId);
-
         Log.d(TAG, "onCreate: Caretaker details - Name: " + caretakerName + ", ID: " + caretakerId + ", Phone: " + caretakerPhoneNumber);
 
         userNameText.setText("Hello, " + caretakerName + "\n(" + caretakerId + ")");
+
+        // Load caretaker's patients
+        loadCaretakerPatients();
 
         databaseRef = FirebaseDatabase.getInstance().getReference("users");
 
@@ -127,66 +127,69 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
         float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
         updateFontSize(fontSize);
-
-        loadPatients(caretakerId);
     }
 
-    private void loadPatients(String caretakerId) {
-        Log.d(TAG, "Loading patients for caretaker: " + caretakerId);
+    private void loadCaretakerPatients() {
         DatabaseReference caretakerRef = FirebaseDatabase.getInstance().getReference("users").child(caretakerId);
         caretakerRef.child("patientIDs").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 List<String> patientIDs = new ArrayList<>();
                 if (dataSnapshot.exists()) {
                     for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
-                        patientIDs.add(snapshot.getValue(String.class));
+                        String patientId = snapshot.getValue(String.class);
+                        if (patientId != null) {
+                            patientIDs.add(patientId);
+                        }
                     }
                 }
-                fetchPatientDetails(patientIDs);
+                Log.d(TAG, "Patient IDs found: " + patientIDs);
+                if (!patientIDs.isEmpty()) {
+                    loadPatientDetails(patientIDs);
+                } else {
+                    Log.d(TAG, "No patient IDs found for caretaker: " + caretakerId);
+                    updateUI();
+                }
             }
 
             @Override
-            public void onCancelled(DatabaseError databaseError) {
+            public void onCancelled(@NonNull DatabaseError databaseError) {
                 Log.e(TAG, "Failed to load caretaker's patient list: " + databaseError.getMessage());
             }
         });
     }
 
-    private int patientsToLoad = 0;
-    private int patientsLoaded = 0;
-
-    private void fetchPatientDetails(List<String> patientIDs) {
-        patientsToLoad = patientIDs.size();
-        patientsLoaded = 0;
+    private void loadPatientDetails(List<String> patientIDs) {
         patients.clear();
-        patientContainer.removeAllViews();
+        final int[] patientsLoaded = {0};
+        final int totalPatients = patientIDs.size();
 
-        if (patientsToLoad == 0) {
-            updateUI();
-            return;
-        }
+        DatabaseReference usersRef = FirebaseDatabase.getInstance().getReference("users");
+        //Log.d(TAG, "Fetching patient details from path: " + usersRef.getPath().toString());
 
-        DatabaseReference patientsRef = FirebaseDatabase.getInstance().getReference("patients");
         for (String patientId : patientIDs) {
-            patientsRef.child(patientId).addListenerForSingleValueEvent(new ValueEventListener() {
+            Log.d(TAG, "Fetching details for patient ID: " + patientId);
+            usersRef.child(patientId).addListenerForSingleValueEvent(new ValueEventListener() {
                 @Override
-                public void onDataChange(DataSnapshot dataSnapshot) {
+                public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                     Patient patient = dataSnapshot.getValue(Patient.class);
                     if (patient != null) {
                         patients.add(patient);
+                        Log.d(TAG, "Loaded patient: " + patient.getFirstName() + " " + patient.getLastName());
+                    } else {
+                        Log.d(TAG, "Patient details not found for ID: " + patientId);
                     }
-                    patientsLoaded++;
-                    if (patientsLoaded == patientsToLoad) {
+                    patientsLoaded[0]++;
+                    if (patientsLoaded[0] == totalPatients) {
                         updateUI();
                     }
                 }
 
                 @Override
-                public void onCancelled(DatabaseError databaseError) {
+                public void onCancelled(@NonNull DatabaseError databaseError) {
                     Log.e(TAG, "Failed to load patient details: " + databaseError.getMessage());
-                    patientsLoaded++;
-                    if (patientsLoaded == patientsToLoad) {
+                    patientsLoaded[0]++;
+                    if (patientsLoaded[0] == totalPatients) {
                         updateUI();
                     }
                 }
@@ -195,12 +198,18 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
     }
 
     private void updateUI() {
-        for (Patient patient : patients) {
-            addPatientCard(patient);
-        }
+        runOnUiThread(() -> {
+            Log.d(TAG, "Updating UI with " + patients.size() + " patients");
+            patientContainer.removeAllViews();
+            for (Patient patient : patients) {
+                addPatientCard(patient);
+            }
+            Log.d(TAG, "UI updated with " + patients.size() + " patients");
+        });
     }
 
     private void updatePatientViews() {
+        Log.d(TAG, "Updating patient views");
         patientContainer.removeAllViews();
         for (Patient patient : patients) {
             addPatientCard(patient);
@@ -208,7 +217,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
     }
 
     private void addPatientCard(Patient patient) {
-        Log.d(TAG, "Adding card for patient: " + patient.getName());
+        Log.d(TAG, "Adding card for patient: " + patient.getFirstName() + " " + patient.getLastName());
         View patientCardView = LayoutInflater.from(this).inflate(R.layout.patient_card, patientContainer, false);
 
         TextView patientNameTextView = patientCardView.findViewById(R.id.patientNameTextView);
@@ -218,8 +227,8 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         TextView patientAccelerometerText = patientCardView.findViewById(R.id.patientAccelerometerText);
         Button removePatientButton = patientCardView.findViewById(R.id.removePatientButton);
 
-        patientNameTextView.setText(patient.getName() != null ? patient.getName() : "N/A");
-        patientIDTextView.setText(patient.getPatientID() != null ? patient.getPatientID() : "N/A");
+        patientNameTextView.setText(patient.getFirstName() != null ? patient.getFirstName() + " " + patient.getLastName() : "N/A");
+        patientIDTextView.setText(patient.getId() != null ? patient.getId() : "N/A");
         patientHeartRateText.setText("Heart Rate: " + (patient.getHeartRate() != 0 ? patient.getHeartRate() : "N/A"));
         patientTemperatureText.setText("Temperature: " + (patient.getTemperature() != 0 ? patient.getTemperature() + "°C" : "N/A"));
         patientAccelerometerText.setText("Accelerometer: X: 0.0, Y: 0.0, Z: 0.0");
@@ -227,6 +236,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         removePatientButton.setOnClickListener(v -> removePatient(patient));
 
         patientContainer.addView(patientCardView);
+        Log.d(TAG, "Patient card added for: " + patient.getFirstName() + " " + patient.getLastName());
     }
 
     private void sortPatients(int position) {
@@ -234,10 +244,10 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
         switch (position) {
             case 0:
-                comparator = Comparator.comparing(Patient::getName);
+                comparator = Comparator.comparing(Patient::getFirstName);
                 break;
             case 1:
-                comparator = Comparator.comparing(Patient::getPatientID);
+                comparator = Comparator.comparing(Patient::getId);
                 break;
             case 2:
                 comparator = Comparator.comparing(Patient::getDob);
@@ -258,7 +268,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
                 comparator = Comparator.comparing(Patient::getLastVisitDate);
                 break;
             default:
-                comparator = Comparator.comparing(Patient::getName);
+                comparator = Comparator.comparing(Patient::getFirstName);
         }
 
         if (!isAscending) {
@@ -275,7 +285,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             return;
         }
 
-        String patientID = patient.getPatientID();
+        String patientID = patient.getId();
         if (patientID == null) {
             Log.e(TAG, "removePatient: Patient ID is null");
             return;
@@ -343,22 +353,23 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 1 && resultCode == RESULT_OK) {
-            String name = data.getStringExtra("patientName"); // Retrieve patient name
+            String firstName = data.getStringExtra("patientFirstName");
+            String lastName = data.getStringExtra("patientLastName");
             String dob = data.getStringExtra("dob");
             String patientID = data.getStringExtra("patientID");
             String gender = data.getStringExtra("gender");
             int age = data.getIntExtra("age", 0);
             String lastVisitDate = data.getStringExtra("lastVisitDate");
 
-            Log.d(TAG, "New patient added: " + name + " (" + patientID + ")");
+            Log.d(TAG, "New patient added: " + firstName + " " + lastName + " (" + patientID + ")");
 
-            Patient newPatient = new Patient(name, dob, patientID);
+            Patient newPatient = new Patient(firstName, lastName, dob, patientID);
             newPatient.setGender(gender);
             newPatient.setAge(age);
             newPatient.setLastVisitDate(lastVisitDate);
             boolean patientExists = false;
             for (Patient patient : patients) {
-                if (patient.getPatientID() != null && patient.getPatientID().equals(patientID)) {
+                if (patient.getId() != null && patient.getId().equals(patientID)) {
                     patientExists = true;
                     break;
                 }

@@ -1,7 +1,8 @@
 package com.example.elderly_health_monitor_app;
 
 public class Patient {
-    private String name;
+    private String firstName;
+    private String lastName;
     private String dob;
     private String patientID;
     private float temperature;
@@ -14,20 +15,19 @@ public class Patient {
     private String caretakerName;
     private String caretakerPhoneNumber;
     private String role;
-    private String lastName;          // New field
-    private String emergencyContact;  // New field
-    private String medicalCard;       // New field
-    private String firstName;         // New field
-    private String password;          // New field
-    private String phoneNumber;       // New field
-    private String id;                // New field
+    private String emergencyContact;
+    private String medicalCard;
+    private String password;
+    private String phoneNumber;
+    private String id;
 
     public Patient() {
         // Default constructor required for calls to DataSnapshot.getValue(Patient.class)
     }
 
-    public Patient(String name, String dob, String patientID) {
-        this.name = name;
+    public Patient(String firstName, String lastName, String dob, String patientID) {
+        this.firstName = firstName;
+        this.lastName = lastName;
         this.dob = dob;
         this.patientID = patientID;
         this.temperature = 0.0f;
@@ -40,22 +40,28 @@ public class Patient {
         this.caretakerName = "";
         this.caretakerPhoneNumber = "";
         this.role = "user";
-        this.lastName = "";
         this.emergencyContact = "";
         this.medicalCard = "";
-        this.firstName = "";
         this.password = "";
         this.phoneNumber = "";
-        this.id = "";
+        this.id = patientID;
     }
 
     // Getters and setters for all fields
-    public String getName() {
-        return name;
+    public String getFirstName() {
+        return firstName;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
 
     public String getDob() {
@@ -181,14 +187,6 @@ public class Patient {
         this.role = role;
     }
 
-    public String getLastName() {
-        return lastName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-
     public String getEmergencyContact() {
         return emergencyContact;
     }
@@ -203,14 +201,6 @@ public class Patient {
 
     public void setMedicalCard(String medicalCard) {
         this.medicalCard = medicalCard;
-    }
-
-    public String getFirstName() {
-        return firstName;
-    }
-
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
     }
 
     public String getPassword() {

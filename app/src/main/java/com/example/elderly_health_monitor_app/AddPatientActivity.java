@@ -158,7 +158,7 @@ public class AddPatientActivity extends AppCompatActivity {
                                 if (task.isSuccessful()) {
                                     Log.d(TAG, "Patient details updated successfully.");
                                     Toast.makeText(AddPatientActivity.this, "Patient details updated successfully", Toast.LENGTH_SHORT).show();
-                                    addPatientToCaretaker(patientID, patientName);
+                                    addPatientToCaretaker(patientID, firstName, lastName);
                                 } else {
                                     Log.e(TAG, "Failed to update patient details: " + task.getException().getMessage());
                                     Toast.makeText(AddPatientActivity.this, "Failed to update patient details", Toast.LENGTH_SHORT).show();
@@ -186,7 +186,7 @@ public class AddPatientActivity extends AppCompatActivity {
         });
     }
 
-    private void addPatientToCaretaker(final String patientID, final String patientName) {
+    private void addPatientToCaretaker(final String patientID, final String firstName, final String lastName) {
         databaseRef.child(caretakerID).child("patientIDs").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
@@ -203,7 +203,8 @@ public class AddPatientActivity extends AppCompatActivity {
                             Log.d(TAG, "Patient ID added to caretaker's list successfully.");
                             Intent resultIntent = new Intent();
                             resultIntent.putExtra("patientID", patientID);
-                            resultIntent.putExtra("patientName", patientName);
+                            resultIntent.putExtra("patientFirstName", firstName);
+                            resultIntent.putExtra("patientLastName", lastName);
                             resultIntent.putExtra("lastVisitDate", patientLastVisitDateInput.getText().toString());
                             setResult(RESULT_OK, resultIntent);
                             finish();

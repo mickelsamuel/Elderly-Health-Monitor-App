@@ -38,11 +38,11 @@ public class PatientAdapter extends RecyclerView.Adapter<PatientAdapter.PatientV
     @Override
     public void onBindViewHolder(@NonNull PatientViewHolder holder, int position) {
         Patient patient = patients.get(position);
-        holder.patientNameTextView.setText(patient.getName());
+        holder.patientNameTextView.setText(patient.getFirstName() + " " + patient.getLastName());
         holder.patientIDTextView.setText(patient.getPatientID());
         holder.patientHeartRateText.setText("Heart Rate: " + patient.getHeartRate());
         holder.patientTemperatureText.setText("Temperature: " + patient.getTemperature() + "°C");
-        holder.patientAccelerometerText.setText("Accelerometer: X: 0.0, Y: 0.0, Z: 0.0");
+        holder.patientAccelerometerText.setText("Accelerometer: X: " + patient.getAccelerometerX() + ", Y: " + patient.getAccelerometerY() + ", Z: " + patient.getAccelerometerZ());
 
         holder.removePatientButton.setOnClickListener(v -> removeButtonClickListener.onRemoveButtonClick(patient));
     }
