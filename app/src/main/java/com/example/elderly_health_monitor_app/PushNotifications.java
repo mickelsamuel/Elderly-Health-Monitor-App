@@ -19,7 +19,7 @@ public class PushNotifications {
 
     public void sendNotification(Context context, String title, String message) {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, "global_notifications")
-                .setSmallIcon(R.drawable.notification_icon)
+                .setSmallIcon(R.drawable.ic_age)
                 .setContentTitle(title)
                 .setContentText(message)
                 .setPriority(NotificationCompat.PRIORITY_HIGH);
