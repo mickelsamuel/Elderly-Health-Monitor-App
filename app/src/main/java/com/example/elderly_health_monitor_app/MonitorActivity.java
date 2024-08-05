@@ -2,28 +2,29 @@ package com.example.elderly_health_monitor_app;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.os.Build;
-import android.os.Bundle;
-import android.os.Handler;
-import android.util.Log;
-import android.view.View;
-import android.widget.TextView;
-import android.widget.Button;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.widget.ImageButton;
-import android.widget.Toast;
-import android.util.TypedValue;
-import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.cardview.widget.CardView;
-import android.content.pm.PackageManager;
 import android.Manifest;
-import android.net.Uri;
-import androidx.core.app.ActivityCompat;
-import android.content.IntentFilter;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.util.Log;
+import android.util.TypedValue;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
+import androidx.cardview.widget.CardView;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.app.ActivityCompat;
 
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -33,11 +34,9 @@ import com.google.firebase.database.ValueEventListener;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class MonitorActivity extends AppCompatActivity {
 
-    // UI elements
     private TextView temperatureReading, accelerometerXReading, accelerometerYReading, accelerometerZReading, heartRateReading, userNameText, statusSummary;
     private View temperatureStatus, accelerometerStatus, heartRateStatus;
     private Button callForHelpButton;
@@ -45,18 +44,12 @@ public class MonitorActivity extends AppCompatActivity {
     private CardView heartRateCard, temperatureCard, accelerometerCard;
 
     private static final String TAG = "MonitorActivity";
-    private static final AtomicInteger messageId = new AtomicInteger();
 
     // Firebase references
     private FirebaseDatabase firebaseDatabase;
     private DatabaseReference heartRateRef, temperatureRef, userRef, accelerometerRef;
 
-    // Handler and Runnables for updating data at intervals
-    private Handler handler;
-    private Runnable heartRateRunnable, temperatureRunnable, accelerometerRunnable;
-    private static final int INTERVAL = 1000; // 1 second
-
-    private String userId; // User ID for the logged-in user
+    private String userId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -98,15 +91,13 @@ public class MonitorActivity extends AppCompatActivity {
         userRef = firebaseDatabase.getReference("users").child(userId);
         setupListeners();
 
-//        // Register broadcast receiver for font size updates
-//        //IntentFilter filter = new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE");
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//            registerReceiver(new FontSizeUpdateReceiver(), filter, Context.RECEIVER_EXPORTED);
-//        } else {
-//            registerReceiver(new FontSizeUpdateReceiver(), filter);
-//        }
+// Register broadcast receiver for font size updates
+IntentFilter filter = new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE");
+registerReceiver(new FontSizeUpdateReceiver(), filter);
 
-        handler = new Handler();
+
+        // Set up Firebase listeners for real-time updates
+        setupFirebaseListeners();
     }
 
     /**
@@ -131,7 +122,6 @@ public class MonitorActivity extends AppCompatActivity {
         refreshUserDetails();
         float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
         updateFontSize(fontSize);
-        startSavingData();
     }
 
     /**
@@ -153,11 +143,7 @@ public class MonitorActivity extends AppCompatActivity {
                     if (dataSnapshot.child("caretakerName").exists() && dataSnapshot.child("caretakerID").exists()) {
                         String caretakerName = dataSnapshot.child("caretakerName").getValue(String.class);
                         String caretakerID = dataSnapshot.child("caretakerID").getValue(String.class);
-                        String caretakerPhoneNumber = dataSnapshot.child("caretakerPhoneNumber").getValue(String.class); // Retrieve phone number
                         statusSummary.setText(String.format("Your caretaker is %s (%s)\n\n", caretakerName, caretakerID));
-
-                        // Update call button to use caretaker phone number
-                        callForHelpButton.setOnClickListener(v -> showOptionDialog());
                     } else {
                         statusSummary.setText("You do not have a caretaker registered yet.\n\n");
                     }
@@ -175,47 +161,132 @@ public class MonitorActivity extends AppCompatActivity {
         });
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (handler != null) {
-            handler.removeCallbacks(heartRateRunnable);
-            handler.removeCallbacks(temperatureRunnable);
-            handler.removeCallbacks(accelerometerRunnable);
-        }
+    /**
+     * Set up Firebase listeners for real-time updates
+     */
+    private void setupFirebaseListeners() {
+        userRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                // Update user details
+                if (dataSnapshot.exists()) {
+                    String firstName = dataSnapshot.child("firstName").getValue(String.class);
+                    String lastName = dataSnapshot.child("lastName").getValue(String.class);
+                    userNameText.setText(String.format("Hello, %s %s \n(%s)\n", firstName, lastName, userId));
+
+                    Log.d(TAG, "setupFirebaseListeners: User details updated - " + firstName + " " + lastName);
+
+                    // Check for caretaker details
+                    if (dataSnapshot.child("caretakerName").exists() && dataSnapshot.child("caretakerID").exists()) {
+                        String caretakerName = dataSnapshot.child("caretakerName").getValue(String.class);
+                        String caretakerID = dataSnapshot.child("caretakerID").getValue(String.class);
+                        statusSummary.setText(String.format("Your caretaker is %s (%s)\n\n", caretakerName, caretakerID));
+                    } else {
+                        statusSummary.setText("You do not have a caretaker registered yet.\n\n");
+                    }
+                } else {
+                    Log.e(TAG, "No data found for user");
+                    Toast.makeText(MonitorActivity.this, "No user data found", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, "Failed to refresh user data", databaseError.toException());
+                Toast.makeText(MonitorActivity.this, "Failed to refresh user data", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        heartRateRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                // Update heart rate data
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    Map<String, Object> heartRateData = (Map<String, Object>) snapshot.getValue();
+                    if (heartRateData != null && userId.equals(heartRateData.get("id"))) {
+                        heartRateReading.setText(String.valueOf(heartRateData.get("heartVal")) + " bpm");
+                        break;
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, "Failed to read heart rate data", databaseError.toException());
+            }
+        });
+
+        temperatureRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                // Update temperature data
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    Map<String, Object> temperatureData = (Map<String, Object>) snapshot.getValue();
+                    if (temperatureData != null && userId.equals(temperatureData.get("id"))) {
+                        temperatureReading.setText(String.valueOf(temperatureData.get("temperatureVal")) + "°C");
+                        break;
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, "Failed to read temperature data", databaseError.toException());
+            }
+        });
+
+        accelerometerRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                // Update accelerometer data
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    Map<String, Object> accelerometerData = (Map<String, Object>) snapshot.getValue();
+                    if (accelerometerData != null && userId.equals(accelerometerData.get("id"))) {
+                        accelerometerXReading.setText(String.valueOf(accelerometerData.get("accelerometerXVal")) + "g");
+                        accelerometerYReading.setText(String.valueOf(accelerometerData.get("accelerometerYVal")) + "g");
+                        accelerometerZReading.setText(String.valueOf(accelerometerData.get("accelerometerZVal")) + "g");
+                        break;
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, "Failed to read accelerometer data", databaseError.toException());
+            }
+        });
     }
 
     /**
-     * Start saving data to the database at regular intervals
+     * Update font size of various UI elements
+     * @param fontSize The new font size to set
      */
-    private void startSavingData() {
-        heartRateRunnable = new Runnable() {
-            @Override
-            public void run() {
-                saveHeartRateToDatabase();
-                handler.postDelayed(this, INTERVAL);
-            }
-        };
+    private void updateFontSize(float fontSize) {
+        // Update font sizes for text views
+        userNameText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        statusSummary.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        temperatureReading.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        heartRateReading.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        accelerometerXReading.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        accelerometerYReading.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        accelerometerZReading.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
 
-        temperatureRunnable = new Runnable() {
-            @Override
-            public void run() {
-                saveTemperatureToDatabase();
-                handler.postDelayed(this, INTERVAL);
-            }
-        };
+        // Update font size for titles if they exist
+        TextView heartRateTitle = findViewById(R.id.heartRateTitle);
+        TextView temperatureTitle = findViewById(R.id.temperatureTitle);
+        TextView accelerometerXTitle = findViewById(R.id.accelerometerXTitle);
+        TextView accelerometerYTitle = findViewById(R.id.accelerometerYTitle);
+        TextView accelerometerZTitle = findViewById(R.id.accelerometerZTitle);
 
-        accelerometerRunnable = new Runnable() {
-            @Override
-            public void run() {
-                saveAccelerometerToDatabase();
-                handler.postDelayed(this, INTERVAL);
-            }
-        };
+        if (heartRateTitle != null) heartRateTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        if (temperatureTitle != null) temperatureTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        if (accelerometerXTitle != null) accelerometerXTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        if (accelerometerYTitle != null) accelerometerYTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        if (accelerometerZTitle != null) accelerometerZTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
 
-        handler.post(heartRateRunnable);
-        handler.post(temperatureRunnable);
-        handler.post(accelerometerRunnable);
+        // Update font size for the button
+        Button callForHelpButton = findViewById(R.id.callForHelpButton);
+        callForHelpButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
     }
 
     /**
@@ -300,82 +371,6 @@ public class MonitorActivity extends AppCompatActivity {
         } else {
             startActivity(callIntent);
         }
-    }
-
-    /**
-     * Update font size of various UI elements
-     * @param fontSize The new font size to set
-     */
-    private void updateFontSize(float fontSize) {
-        // Update font sizes for text views
-        userNameText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-        statusSummary.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-        temperatureReading.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-        heartRateReading.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-        accelerometerXReading.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-        accelerometerYReading.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-        accelerometerZReading.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-
-        // Update font size for titles if they exist
-        TextView heartRateTitle = findViewById(R.id.heartRateTitle);
-        TextView temperatureTitle = findViewById(R.id.temperatureTitle);
-        TextView accelerometerXTitle = findViewById(R.id.accelerometerXTitle);
-        TextView accelerometerYTitle = findViewById(R.id.accelerometerYTitle);
-        TextView accelerometerZTitle = findViewById(R.id.accelerometerZTitle);
-
-        if (heartRateTitle != null) heartRateTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-        if (temperatureTitle != null) temperatureTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-        if (accelerometerXTitle != null) accelerometerXTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-        if (accelerometerYTitle != null) accelerometerYTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-        if (accelerometerZTitle != null) accelerometerZTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-
-        // Update font size for the button
-        Button callForHelpButton = findViewById(R.id.callForHelpButton);
-        callForHelpButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
-    }
-
-    /**
-     * Save heart rate data to the database
-     */
-    private void saveHeartRateToDatabase() {
-        long timestamp = System.currentTimeMillis();
-        String heartRateValue = heartRateReading.getText().toString().replace(" bpm", "").trim();
-        Map<String, Object> heartRateData = new HashMap<>();
-        heartRateData.put("id", userId); // Ensure userId is added here
-        heartRateData.put("heartVal", Integer.parseInt(heartRateValue));
-        heartRateData.put("heartTime", timestamp);
-        heartRateRef.push().setValue(heartRateData);
-    }
-
-    /**
-     * Save temperature data to the database
-     */
-    private void saveTemperatureToDatabase() {
-        long timestamp = System.currentTimeMillis();
-        String temperatureValue = temperatureReading.getText().toString().replace("°C", "").trim();
-        Map<String, Object> temperatureData = new HashMap<>();
-        temperatureData.put("id", userId); // Ensure userId is added here
-        temperatureData.put("temperatureVal", Float.parseFloat(temperatureValue));
-        temperatureData.put("temperatureTime", timestamp);
-        temperatureRef.push().setValue(temperatureData);
-    }
-
-    /**
-     * Save accelerometer data to the database
-     */
-    private void saveAccelerometerToDatabase() {
-        long timestamp = System.currentTimeMillis();
-        String accelerometerXValue = String.format("%.2f", Float.parseFloat(accelerometerXReading.getText().toString().replace("g", "").trim()));
-        String accelerometerYValue = String.format("%.2f", Float.parseFloat(accelerometerYReading.getText().toString().replace("g", "").trim()));
-        String accelerometerZValue = String.format("%.2f", Float.parseFloat(accelerometerZReading.getText().toString().replace("g", "").trim()));
-
-        Map<String, Object> accelerometerData = new HashMap<>();
-        accelerometerData.put("id", userId); // Ensure userId is added here
-        accelerometerData.put("accelerometerXVal", Float.parseFloat(accelerometerXValue));
-        accelerometerData.put("accelerometerYVal", Float.parseFloat(accelerometerYValue));
-        accelerometerData.put("accelerometerZVal", Float.parseFloat(accelerometerZValue));
-        accelerometerData.put("accelerometerTime", timestamp);
-        accelerometerRef.push().setValue(accelerometerData);
     }
 
     /**

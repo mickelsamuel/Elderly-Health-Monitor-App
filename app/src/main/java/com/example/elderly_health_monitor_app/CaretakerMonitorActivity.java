@@ -54,6 +54,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
     private String caretakerId;
     private String caretakerPhoneNumber;
+    private String caretakerName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,19 +72,44 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
         // Get caretaker details from the intent
         Intent intent = getIntent();
-        String caretakerName = intent.getStringExtra("caretakerName");
         caretakerId = intent.getStringExtra("caretakerId");
         caretakerPhoneNumber = intent.getStringExtra("caretakerPhoneNumber");
 
-        Log.d(TAG, "onCreate: Caretaker details - Name: " + caretakerName + ", ID: " + caretakerId + ", Phone: " + caretakerPhoneNumber);
-
-        userNameText.setText("Hello, " + caretakerName + "\n(" + caretakerId + ")");
-
-        // Load caretaker's patients
-        loadCaretakerPatients();
+        if (caretakerId == null) {
+            Log.e(TAG, "Caretaker ID is null. Cannot proceed.");
+            Toast.makeText(this, "Caretaker ID is missing. Cannot load data.", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
 
         // Initialize Firebase database reference
         databaseRef = FirebaseDatabase.getInstance().getReference("users");
+
+        // Load caretaker's details and set up UI
+        loadCaretakerDetails();
+    }
+
+    private void loadCaretakerDetails() {
+        databaseRef.child(caretakerId).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                caretakerName = dataSnapshot.child("firstName").getValue(String.class) + " " + dataSnapshot.child("lastName").getValue(String.class);
+                userNameText.setText("Hello, " + caretakerName + "\n(" + caretakerId + ")");
+
+                // Set up UI components now that we have the caretaker's details
+                setupUIComponents();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                Log.e(TAG, "Failed to load caretaker details: " + databaseError.getMessage());
+            }
+        });
+    }
+
+    private void setupUIComponents() {
+        // Load caretaker's patients
+        loadCaretakerPatients();
 
         // Set up the sort spinner with options
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
@@ -140,6 +166,9 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         // Set initial font size from shared preferences
         float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
         updateFontSize(fontSize);
+
+        // Set up Firebase listeners for real-time updates
+        setupFirebaseListeners();
     }
 
     /**
@@ -181,36 +210,41 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
      */
     private void loadPatientDetails(List<String> patientIDs) {
         patients.clear();
-        final int[] patientsLoaded = {0};
-        final int totalPatients = patientIDs.size();
-
         DatabaseReference usersRef = FirebaseDatabase.getInstance().getReference("users");
 
         for (String patientId : patientIDs) {
-            Log.d(TAG, "Fetching details for patient ID: " + patientId);
-            usersRef.child(patientId).addListenerForSingleValueEvent(new ValueEventListener() {
+            usersRef.child(patientId).addValueEventListener(new ValueEventListener() {
                 @Override
                 public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                     Patient patient = dataSnapshot.getValue(Patient.class);
                     if (patient != null) {
-                        patients.add(patient);
-                        Log.d(TAG, "Loaded patient: " + patient.getFirstName() + " " + patient.getLastName());
-                    } else {
-                        Log.d(TAG, "Patient details not found for ID: " + patientId);
-                    }
-                    patientsLoaded[0]++;
-                    if (patientsLoaded[0] == totalPatients) {
-                        updateUI();
+                        boolean exists = false;
+                        for (Patient p : patients) {
+                            if (p.getId().equals(patient.getId())) {
+                                p.setHeartRate(patient.getHeartRate());
+                                p.setTemperature(patient.getTemperature());
+                                // Add dummy data for accelerometer values
+                                p.setAccelerometerX(0.0);
+                                p.setAccelerometerY(0.0);
+                                p.setAccelerometerZ(0.0);
+                                exists = true;
+                                break;
+                            }
+                        }
+                        if (!exists) {
+                            // Set dummy data for new patients
+                            patient.setAccelerometerX(0.0);
+                            patient.setAccelerometerY(0.0);
+                            patient.setAccelerometerZ(0.0);
+                            patients.add(patient);
+                        }
+                        updatePatientViews();
                     }
                 }
 
                 @Override
                 public void onCancelled(@NonNull DatabaseError databaseError) {
                     Log.e(TAG, "Failed to load patient details: " + databaseError.getMessage());
-                    patientsLoaded[0]++;
-                    if (patientsLoaded[0] == totalPatients) {
-                        updateUI();
-                    }
                 }
             });
         }
@@ -261,7 +295,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         patientIDTextView.setText(patient.getId() != null ? patient.getId() : "N/A");
         patientHeartRateText.setText("Heart Rate: " + (patient.getHeartRate() != 0 ? patient.getHeartRate() : "N/A"));
         patientTemperatureText.setText("Temperature: " + (patient.getTemperature() != 0 ? patient.getTemperature() + "°C" : "N/A"));
-        patientAccelerometerText.setText("Accelerometer: X: 0.0, Y: 0.0, Z: 0.0");
+        patientAccelerometerText.setText("Accelerometer: X: " + patient.getAccelerometerX() + ", Y: " + patient.getAccelerometerY() + ", Z: " + patient.getAccelerometerZ());
 
         removePatientButton.setOnClickListener(v -> removePatient(patient));
         infoPatientButton.setOnClickListener(v -> showPatientInfo(patient));
@@ -277,6 +311,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
     private void showPatientInfo(Patient patient) {
         Intent intent = new Intent(this, PatientInfoActivity.class);
         intent.putExtra("patientId", patient.getId());
+        intent.putExtra("caretakerId", caretakerId); // Pass caretakerId to the PatientInfoActivity
         startActivity(intent);
     }
 
@@ -518,5 +553,32 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             float fontSize = intent.getFloatExtra("font_size", 18);
             updateFontSize(fontSize);
         }
+    }
+
+    /**
+     * Set up Firebase listeners for real-time updates
+     */
+    private void setupFirebaseListeners() {
+        databaseRef.child(caretakerId).child("patientIDs").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                List<String> patientIDs = new ArrayList<>();
+                if (dataSnapshot.exists()) {
+                    for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                        String patientId = snapshot.getValue(String.class);
+                        if (patientId != null) {
+                            patientIDs.add(patientId);
+                        }
+                    }
+                }
+                Log.d(TAG, "Patient IDs updated: " + patientIDs);
+                loadPatientDetails(patientIDs);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                Log.e(TAG, "Failed to listen for patient IDs: " + databaseError.getMessage());
+            }
+        });
     }
 }
