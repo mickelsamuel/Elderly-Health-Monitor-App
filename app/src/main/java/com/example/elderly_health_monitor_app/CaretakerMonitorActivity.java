@@ -30,8 +30,10 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -49,7 +51,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
     private Button toggleSortOrderButton;
     private ImageButton settingsButton;
     private LinearLayout patientContainer;
-    private Button testAlertButton;
 
     private ArrayList<Patient> patients = new ArrayList<>();
     private boolean isAscending = true;
@@ -76,7 +77,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         toggleSortOrderButton = findViewById(R.id.toggleSortOrderButton);
         settingsButton = findViewById(R.id.settingsButton);
         patientContainer = findViewById(R.id.patientContainer);
-        //testAlertButton = findViewById(R.id.testAlertButton);
 
         // Initialize TemperatureMonitor for testing
         if (!patients.isEmpty()) {
@@ -101,9 +101,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
         // Load caretaker's details and set up UI
         loadCaretakerDetails();
-
-        // Set up test alert button
-        setupTestAlertButton();
     }
 
     private void loadCaretakerDetails() {
@@ -186,22 +183,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
         // Set up Firebase listeners for real-time updates
         setupFirebaseListeners();
-    }
-
-    // Setting up the test alert button
-    private void setupTestAlertButton() {
-        testAlertButton.setOnClickListener(v -> {
-            // Add test temperature data that should trigger an alert
-            if (!patients.isEmpty()) {
-                Patient testPatient = patients.get(0); // Use the first patient for testing
-                double testTemperature = 39.0; // This should trigger a high fever alert
-                long testTimestamp = System.currentTimeMillis();
-                TemperatureMonitor temperatureMonitor = new TemperatureMonitor(this, testPatient);
-                temperatureMonitor.addReading(testTemperature, testTimestamp);
-            } else {
-                Toast.makeText(this, "No patients available for testing", Toast.LENGTH_SHORT).show();
-            }
-        });
     }
 
     private void loadCaretakerPatients() {
