@@ -143,58 +143,62 @@ public class CaretakerFragment extends Fragment {
         boolean isValid = true;
 
         // Validate first name
-        if (TextUtils.isEmpty(Objects.requireNonNull(editTextFirstName.getText()).toString().trim())) {
-            tilFirstName.setError("First name is required");
+        String firstName = Objects.requireNonNull(editTextFirstName.getText()).toString().trim();
+        if (TextUtils.isEmpty(firstName) || firstName.length() < 2 || firstName.length() > 30 || !firstName.matches("[a-zA-Z\\-']+")) {
+            tilFirstName.setError("First name must be 2-30 characters and can only contain letters, hyphens, and apostrophes");
             isValid = false;
         } else {
             tilFirstName.setError(null);
         }
 
         // Validate last name
-        if (TextUtils.isEmpty(Objects.requireNonNull(editTextLastName.getText()).toString().trim())) {
-            tilLastName.setError("Last name is required");
+        String lastName = Objects.requireNonNull(editTextLastName.getText()).toString().trim();
+        if (TextUtils.isEmpty(lastName) || lastName.length() < 2 || lastName.length() > 30 || !lastName.matches("[a-zA-Z\\-']+")) {
+            tilLastName.setError("Last name must be 2-30 characters and can only contain letters, hyphens, and apostrophes");
             isValid = false;
         } else {
             tilLastName.setError(null);
         }
 
         // Validate phone number
-        if (TextUtils.isEmpty(Objects.requireNonNull(editTextPhoneNumber.getText()).toString().trim())) {
-            tilPhoneNumber.setError("Phone number is required");
+        String phoneNumber = Objects.requireNonNull(editTextPhoneNumber.getText()).toString().trim();
+        if (TextUtils.isEmpty(phoneNumber) || !phoneNumber.matches("\\d{10}")) {
+            tilPhoneNumber.setError("Valid 10-digit phone number is required");
             isValid = false;
         } else {
             tilPhoneNumber.setError(null);
         }
 
         // Validate medical card
-        if (TextUtils.isEmpty(Objects.requireNonNull(editTextMedicalCard.getText()).toString().trim())) {
-            tilMedicalCard.setError("Medical card is required");
+        String medicalCard = Objects.requireNonNull(editTextMedicalCard.getText()).toString().trim();
+        if (TextUtils.isEmpty(medicalCard) || medicalCard.length() < 5 || medicalCard.length() > 20) {
+            tilMedicalCard.setError("Medical card must be 5-20 characters");
             isValid = false;
         } else {
             tilMedicalCard.setError(null);
         }
 
         // Validate password
-        if (TextUtils.isEmpty(Objects.requireNonNull(editTextPassword.getText()).toString().trim())) {
-            tilPassword.setError("Password is required");
+        String password = Objects.requireNonNull(editTextPassword.getText()).toString().trim();
+        if (TextUtils.isEmpty(password) || password.length() < 6) {
+            tilPassword.setError("Password must be at least 6 characters");
             isValid = false;
         } else {
             tilPassword.setError(null);
         }
 
         // Validate confirm password
-        if (TextUtils.isEmpty(Objects.requireNonNull(editTextConfirmPassword.getText()).toString().trim())) {
-            tilConfirmPassword.setError("Confirm password is required");
-            isValid = false;
-        } else if (!editTextPassword.getText().toString().trim().equals(editTextConfirmPassword.getText().toString().trim())) {
+        String confirmPassword = Objects.requireNonNull(editTextConfirmPassword.getText()).toString().trim();
+        if (TextUtils.isEmpty(confirmPassword) || !confirmPassword.equals(password)) {
             tilConfirmPassword.setError("Passwords do not match");
             isValid = false;
         } else {
             tilConfirmPassword.setError(null);
         }
 
-        // Validate license
-        if (TextUtils.isEmpty(Objects.requireNonNull(editTextLicense.getText()).toString().trim())) {
+        // Validate license (already validated for uniqueness)
+        String license = Objects.requireNonNull(editTextLicense.getText()).toString().trim();
+        if (TextUtils.isEmpty(license)) {
             tilLicense.setError("License is required");
             isValid = false;
         } else {

@@ -222,18 +222,23 @@ public class SettingsActivity extends AppCompatActivity {
             String emergencyContact = editTextEmergencyContact.getText().toString().trim();
 
             // Validate phone number and emergency contact
-            if (phoneNumber.isEmpty() || !phoneNumber.matches("[0-9]+") || phoneNumber.length() != 10) {
+            if (!validatePhoneNumber(phoneNumber)) {
                 Toast.makeText(this, "Please enter a valid phone number", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            if (emergencyContact.isEmpty() || !emergencyContact.matches("[0-9]+") || emergencyContact.length() != 10) {
+            if (!validatePhoneNumber(emergencyContact)) {
                 Toast.makeText(this, "Please enter a valid emergency contact number", Toast.LENGTH_SHORT).show();
                 return;
             }
 
             saveChanges(phoneNumber, emergencyContact);
         });
+    }
+
+    // Validate phone number
+    private boolean validatePhoneNumber(String phoneNumber) {
+        return !TextUtils.isEmpty(phoneNumber) && phoneNumber.matches("\\d{10}");
     }
 
     // Save user changes to Firebase
@@ -322,6 +327,11 @@ public class SettingsActivity extends AppCompatActivity {
             public void onDataChange(DataSnapshot dataSnapshot) {
                 String storedPassword = dataSnapshot.getValue(String.class);
                 if (storedPassword != null && storedPassword.equals(currentPassword)) {
+                    // Validate new password
+                    if (!validatePassword(newPassword)) {
+                        Toast.makeText(SettingsActivity.this, "New password must be at least 6 characters long", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
                     // Update the password in the database
                     databaseRef.child("password").setValue(newPassword).addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
@@ -345,6 +355,12 @@ public class SettingsActivity extends AppCompatActivity {
             }
         });
     }
+
+    // Validate password
+    private boolean validatePassword(String password) {
+        return password != null && password.length() >= 6;
+    }
+
 
     // Set up delete account functionality
     private void setupDeleteAccount() {
