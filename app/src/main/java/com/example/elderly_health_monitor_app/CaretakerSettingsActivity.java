@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -252,13 +253,18 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
             String license = editTextLicense.getText().toString().trim();
             String medicalCard = editTextMedicalCard.getText().toString().trim();
 
-            if (phoneNumber.isEmpty() || !phoneNumber.matches("[0-9]+") || phoneNumber.length() != 10) {
+            if (!validatePhoneNumber(phoneNumber)) {
                 Toast.makeText(this, "Please enter a valid phone number", Toast.LENGTH_SHORT).show();
                 return;
             }
 
             saveChanges(firstName, lastName, phoneNumber, license, medicalCard);
         });
+    }
+
+    // Validate phone number
+    private boolean validatePhoneNumber(String phoneNumber) {
+        return !TextUtils.isEmpty(phoneNumber) && phoneNumber.matches("\\d{10}");
     }
 
     /**
@@ -340,10 +346,12 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
             String newPassword = inputNewPassword.getText().toString();
             String confirmNewPassword = inputConfirmNewPassword.getText().toString();
 
-            if (newPassword.equals(confirmNewPassword)) {
-                changePassword(currentPassword, newPassword);
-            } else {
+            if (!validatePassword(newPassword)) {
+                Toast.makeText(CaretakerSettingsActivity.this, "New password must be at least 6 characters long", Toast.LENGTH_SHORT).show();
+            } else if (!newPassword.equals(confirmNewPassword)) {
                 Toast.makeText(CaretakerSettingsActivity.this, "New passwords do not match", Toast.LENGTH_SHORT).show();
+            } else {
+                changePassword(currentPassword, newPassword);
             }
         });
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
@@ -369,6 +377,10 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
             public void onDataChange(DataSnapshot dataSnapshot) {
                 String storedPassword = dataSnapshot.getValue(String.class);
                 if (storedPassword != null && storedPassword.equals(currentPassword)) {
+                    if (!validatePassword(newPassword)) {
+                        Toast.makeText(CaretakerSettingsActivity.this, "New password must be at least 6 characters long", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
                     databaseRef.child("password").setValue(newPassword).addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
                             Log.d(TAG, "Password updated successfully");
@@ -390,6 +402,11 @@ public class CaretakerSettingsActivity extends AppCompatActivity {
                 Toast.makeText(CaretakerSettingsActivity.this, "Failed to read password", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    // Validate password
+    private boolean validatePassword(String password) {
+        return password != null && password.length() >= 6;
     }
 
     /**
