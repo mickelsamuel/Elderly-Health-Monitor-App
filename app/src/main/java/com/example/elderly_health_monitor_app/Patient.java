@@ -138,7 +138,6 @@ public class Patient {
         this.accelerometerReading = accelerometerReading;
     }
 
-    // Methods to get individual accelerometer readings
     public double getAccelerometerX() {
         return accelerometerX;
     }

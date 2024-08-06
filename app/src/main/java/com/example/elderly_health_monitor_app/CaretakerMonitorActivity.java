@@ -1,9 +1,13 @@
 package com.example.elderly_health_monitor_app;
 
+import android.app.AlertDialog;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
@@ -20,6 +24,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
 
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -44,10 +49,12 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
     private Button toggleSortOrderButton;
     private ImageButton settingsButton;
     private LinearLayout patientContainer;
+    private Button testAlertButton;
 
     private ArrayList<Patient> patients = new ArrayList<>();
     private boolean isAscending = true;
     private DatabaseReference databaseRef;
+    private TemperatureMonitor temperatureMonitor;
 
     private static final String TAG = "CaretakerMonitorActivity";
     private static final String CHANNEL_ID = "patient_alerts_channel";
@@ -69,6 +76,13 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         toggleSortOrderButton = findViewById(R.id.toggleSortOrderButton);
         settingsButton = findViewById(R.id.settingsButton);
         patientContainer = findViewById(R.id.patientContainer);
+        //testAlertButton = findViewById(R.id.testAlertButton);
+
+        // Initialize TemperatureMonitor for testing
+        if (!patients.isEmpty()) {
+            Patient testPatient = patients.get(0); // Use the first patient for testing
+            temperatureMonitor = new TemperatureMonitor(this, testPatient);
+        }
 
         // Get caretaker details from the intent
         Intent intent = getIntent();
@@ -87,6 +101,9 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
         // Load caretaker's details and set up UI
         loadCaretakerDetails();
+
+        // Set up test alert button
+        setupTestAlertButton();
     }
 
     private void loadCaretakerDetails() {
@@ -161,7 +178,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
                 });
 
         // Register receiver for font size updates
-      //  registerReceiver(new FontSizeUpdateReceiver(), new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE"));
+        // registerReceiver(new FontSizeUpdateReceiver(), new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE"));
 
         // Set initial font size from shared preferences
         float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
@@ -171,9 +188,22 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         setupFirebaseListeners();
     }
 
-    /**
-     * Load the patients assigned to the caretaker
-     */
+    // Setting up the test alert button
+    private void setupTestAlertButton() {
+        testAlertButton.setOnClickListener(v -> {
+            // Add test temperature data that should trigger an alert
+            if (!patients.isEmpty()) {
+                Patient testPatient = patients.get(0); // Use the first patient for testing
+                double testTemperature = 39.0; // This should trigger a high fever alert
+                long testTimestamp = System.currentTimeMillis();
+                TemperatureMonitor temperatureMonitor = new TemperatureMonitor(this, testPatient);
+                temperatureMonitor.addReading(testTemperature, testTimestamp);
+            } else {
+                Toast.makeText(this, "No patients available for testing", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
     private void loadCaretakerPatients() {
         DatabaseReference caretakerRef = FirebaseDatabase.getInstance().getReference("users").child(caretakerId);
         caretakerRef.child("patientIDs").addListenerForSingleValueEvent(new ValueEventListener() {
@@ -204,10 +234,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Load the details of patients
-     * @param patientIDs List of patient IDs
-     */
     private void loadPatientDetails(List<String> patientIDs) {
         patients.clear();
         DatabaseReference usersRef = FirebaseDatabase.getInstance().getReference("users");
@@ -239,6 +265,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
                             patients.add(patient);
                         }
                         updatePatientViews();
+                        updateTemperatureMonitor(patient);
                     }
                 }
 
@@ -250,9 +277,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Update the UI with patient details
-     */
     private void updateUI() {
         runOnUiThread(() -> {
             Log.d(TAG, "Updating UI with " + patients.size() + " patients");
@@ -264,9 +288,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Update the views for patients
-     */
     private void updatePatientViews() {
         Log.d(TAG, "Updating patient views");
         patientContainer.removeAllViews();
@@ -275,10 +296,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Add a card view for a patient
-     * @param patient The patient to display
-     */
     private void addPatientCard(Patient patient) {
         Log.d(TAG, "Adding card for patient: " + patient.getFirstName() + " " + patient.getLastName());
         View patientCardView = LayoutInflater.from(this).inflate(R.layout.patient_card, patientContainer, false);
@@ -304,21 +321,13 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         Log.d(TAG, "Patient card added for: " + patient.getFirstName() + " " + patient.getLastName());
     }
 
-    /**
-     * Show detailed information about a patient
-     * @param patient The patient to show information for
-     */
     private void showPatientInfo(Patient patient) {
         Intent intent = new Intent(this, PatientInfoActivity.class);
         intent.putExtra("patientId", patient.getId());
-        intent.putExtra("caretakerId", caretakerId); // Pass caretakerId to the PatientInfoActivity
+        intent.putExtra("caretakerId", caretakerId);
         startActivity(intent);
     }
 
-    /**
-     * Sort the list of patients based on the selected criteria
-     * @param position The selected sorting criteria position
-     */
     private void sortPatients(int position) {
         Comparator<Patient> comparator;
 
@@ -359,10 +368,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         updatePatientViews();
     }
 
-    /**
-     * Remove a patient from the caretaker's list
-     * @param patient The patient to remove
-     */
     private void removePatient(Patient patient) {
         if (patient == null) {
             Log.e(TAG, "removePatient: Patient object is null");
@@ -466,11 +471,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Add a patient to the caretaker's list in Firebase
-     * @param caretakerId The ID of the caretaker
-     * @param patientId The ID of the patient
-     */
     private void addPatientToCaretaker(String caretakerId, String patientId) {
         DatabaseReference caretakerRef = FirebaseDatabase.getInstance().getReference("users").child(caretakerId);
         caretakerRef.child("patientIDs").addListenerForSingleValueEvent(new ValueEventListener() {
@@ -510,10 +510,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         updateFontSize(fontSize);
     }
 
-    /**
-     * Update the font size of UI components
-     * @param fontSize The font size to set
-     */
     private void updateFontSize(float fontSize) {
         userNameText.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
         statusSummary.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
@@ -544,9 +540,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * BroadcastReceiver to update font size based on settings
-     */
     private class FontSizeUpdateReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -555,9 +548,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Set up Firebase listeners for real-time updates
-     */
     private void setupFirebaseListeners() {
         databaseRef.child(caretakerId).child("patientIDs").addValueEventListener(new ValueEventListener() {
             @Override
@@ -580,5 +570,68 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
                 Log.e(TAG, "Failed to listen for patient IDs: " + databaseError.getMessage());
             }
         });
+    }
+
+    // Initialize TemperatureMonitor for each patient
+    private void updateTemperatureMonitor(Patient patient) {
+        double temperature = patient.getTemperature();
+        long timestamp = System.currentTimeMillis(); // Using current time as timestamp
+        TemperatureMonitor temperatureMonitor = new TemperatureMonitor(this, patient);
+        temperatureMonitor.addReading(temperature, timestamp);
+    }
+
+    private BroadcastReceiver temperatureAlertReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent != null && intent.getAction().equals("com.example.elderly_health_monitor_app.TEMPERATURE_ALERT")) {
+                String alertMessage = intent.getStringExtra("alertMessage");
+                String patientName = intent.getStringExtra("patientName");
+                if (alertMessage != null && patientName != null) {
+                    // Show an AlertDialog with the alert message and patient information
+                    new AlertDialog.Builder(CaretakerMonitorActivity.this)
+                            .setTitle("Temperature Alert")
+                            .setMessage(alertMessage)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show();
+
+                    // Show a toast message as a backup
+                    Toast.makeText(CaretakerMonitorActivity.this, alertMessage, Toast.LENGTH_LONG).show();
+
+                    // Create a notification
+                    createNotification(alertMessage);
+                }
+            }
+        }
+    };
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        IntentFilter filter = new IntentFilter("com.example.elderly_health_monitor_app.TEMPERATURE_ALERT");
+        registerReceiver(temperatureAlertReceiver, filter);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterReceiver(temperatureAlertReceiver);
+    }
+
+    private void createNotification(String alertMessage) {
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Patient Alerts", NotificationManager.IMPORTANCE_HIGH);
+            notificationManager.createNotificationChannel(channel);
+        }
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.drawable.baseline_crisis_alert_24)
+                .setContentTitle("Temperature Alert")
+                .setContentText(alertMessage)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true);
+
+        notificationManager.notify(1, builder.build());
     }
 }
