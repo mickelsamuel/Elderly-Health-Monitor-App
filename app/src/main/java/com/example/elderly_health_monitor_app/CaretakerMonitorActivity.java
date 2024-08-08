@@ -1,12 +1,10 @@
 package com.example.elderly_health_monitor_app;
 
-import android.app.AlertDialog;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.content.BroadcastReceiver;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -23,16 +21,17 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
+import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
@@ -55,10 +54,9 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
     private ArrayList<Patient> patients = new ArrayList<>();
     private boolean isAscending = true;
     private DatabaseReference databaseRef;
-    private TemperatureMonitor temperatureMonitor;
 
     private static final String TAG = "CaretakerMonitorActivity";
-    private static final String CHANNEL_ID = "patient_alerts_channel";
+    private static final String CHANNEL_ID = "health_monitor_notifications";
 
     private String caretakerId;
     private String caretakerPhoneNumber;
@@ -78,12 +76,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         settingsButton = findViewById(R.id.settingsButton);
         patientContainer = findViewById(R.id.patientContainer);
 
-        // Initialize TemperatureMonitor for testing
-        if (!patients.isEmpty()) {
-            Patient testPatient = patients.get(0); // Use the first patient for testing
-            temperatureMonitor = new TemperatureMonitor(this, testPatient);
-        }
-
         // Get caretaker details from the intent
         Intent intent = getIntent();
         caretakerId = intent.getStringExtra("caretakerId");
@@ -99,8 +91,17 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         // Initialize Firebase database reference
         databaseRef = FirebaseDatabase.getInstance().getReference("users");
 
+        createNotificationChannel();
+
         // Load caretaker's details and set up UI
         loadCaretakerDetails();
+
+        // Check if the activity was started by a notification
+        if (intent.hasExtra("alertTitle") && intent.hasExtra("alertMessage")) {
+            String alertTitle = intent.getStringExtra("alertTitle");
+            String alertMessage = intent.getStringExtra("alertMessage");
+            showAlertDialog(alertTitle, alertMessage);
+        }
     }
 
     private void loadCaretakerDetails() {
@@ -166,16 +167,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             settingsIntent.putExtra("caretakerLicense", caretakerId);
             startActivity(settingsIntent);
         });
-
-        // Subscribe to Firebase messaging topic for patient alerts
-        FirebaseMessaging.getInstance().subscribeToTopic(caretakerId)
-                .addOnCompleteListener(task -> {
-                    String msg = task.isSuccessful() ? "Subscribed to patient alerts" : "Subscription failed";
-                    Log.d(TAG, msg);
-                });
-
-        // Register receiver for font size updates
-        // registerReceiver(new FontSizeUpdateReceiver(), new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE"));
 
         // Set initial font size from shared preferences
         float fontSize = getSharedPreferences("settings", MODE_PRIVATE).getFloat("font_size", 18);
@@ -246,7 +237,6 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
                             patients.add(patient);
                         }
                         updatePatientViews();
-                        updateTemperatureMonitor(patient);
                     }
                 }
 
@@ -427,16 +417,10 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             String lastName = data.getStringExtra("patientLastName");
             String dob = data.getStringExtra("dob");
             String patientID = data.getStringExtra("patientID");
-            String gender = data.getStringExtra("gender");
-            int age = data.getIntExtra("age", 0);
-            String lastVisitDate = data.getStringExtra("lastVisitDate");
 
             Log.d(TAG, "New patient added: " + firstName + " " + lastName + " (" + patientID + ")");
 
             Patient newPatient = new Patient(firstName, lastName, dob, patientID);
-            newPatient.setGender(gender);
-            newPatient.setAge(age);
-            newPatient.setLastVisitDate(lastVisitDate);
             boolean patientExists = false;
             for (Patient patient : patients) {
                 if (patient.getId() != null && patient.getId().equals(patientID)) {
@@ -521,15 +505,8 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         }
     }
 
-    private class FontSizeUpdateReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            float fontSize = intent.getFloatExtra("font_size", 18);
-            updateFontSize(fontSize);
-        }
-    }
-
     private void setupFirebaseListeners() {
+        // Listen for changes in the patient IDs list
         databaseRef.child(caretakerId).child("patientIDs").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
@@ -542,77 +519,103 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
                         }
                     }
                 }
-                Log.d(TAG, "Patient IDs updated: " + patientIDs);
+                Log.d(TAG, "setupFirebaseListeners: Patient IDs updated: " + patientIDs);
                 loadPatientDetails(patientIDs);
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError databaseError) {
-                Log.e(TAG, "Failed to listen for patient IDs: " + databaseError.getMessage());
+                Log.e(TAG, "setupFirebaseListeners: Failed to listen for patient IDs", databaseError.toException());
+            }
+        });
+
+        // Listen for notifications for the caretaker
+        DatabaseReference notificationsRef = FirebaseDatabase.getInstance().getReference("notifications").child(caretakerId);
+        notificationsRef.addChildEventListener(new ChildEventListener() {
+            @Override
+            public void onChildAdded(@NonNull DataSnapshot dataSnapshot, @Nullable String previousChildName) {
+                if (dataSnapshot.exists()) {
+                    Map<String, Object> notificationData = (Map<String, Object>) dataSnapshot.getValue();
+                    if (notificationData != null) {
+                        String title = (String) notificationData.get("title");
+                        String message = (String) notificationData.get("message");
+                        String patientID = (String) notificationData.get("patientID");
+                        String patientName = (String) notificationData.get("patientName");
+
+                        // Show the notification
+                        showNotification(title, message, patientID, patientName);
+
+                        // Remove the notification node after processing
+                        dataSnapshot.getRef().removeValue();
+                    }
+                }
+            }
+
+            @Override
+            public void onChildChanged(@NonNull DataSnapshot dataSnapshot, @Nullable String previousChildName) {
+            }
+
+            @Override
+            public void onChildRemoved(@NonNull DataSnapshot dataSnapshot) {
+            }
+
+            @Override
+            public void onChildMoved(@NonNull DataSnapshot dataSnapshot, @Nullable String previousChildName) {
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                Log.e(TAG, "setupFirebaseListeners: Failed to listen for notifications", databaseError.toException());
             }
         });
     }
 
-    // Initialize TemperatureMonitor for each patient
-    private void updateTemperatureMonitor(Patient patient) {
-        double temperature = patient.getTemperature();
-        long timestamp = System.currentTimeMillis(); // Using current time as timestamp
-        TemperatureMonitor temperatureMonitor = new TemperatureMonitor(this, patient);
-        temperatureMonitor.addReading(temperature, timestamp);
-    }
+    private void showNotification(String title, String message, String patientID, String patientName) {
+        Intent intent = new Intent(this, CaretakerMonitorActivity.class);
+        intent.putExtra("alertTitle", title);
+        intent.putExtra("alertMessage", message);
+        intent.putExtra("patientID", patientID);
+        intent.putExtra("patientName", patientName);
 
-    private BroadcastReceiver temperatureAlertReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (intent != null && intent.getAction().equals("com.example.elderly_health_monitor_app.TEMPERATURE_ALERT")) {
-                String alertMessage = intent.getStringExtra("alertMessage");
-                String patientName = intent.getStringExtra("patientName");
-                if (alertMessage != null && patientName != null) {
-                    // Show an AlertDialog with the alert message and patient information
-                    new AlertDialog.Builder(CaretakerMonitorActivity.this)
-                            .setTitle("Temperature Alert")
-                            .setMessage(alertMessage)
-                            .setPositiveButton(android.R.string.ok, null)
-                            .show();
-
-                    // Show a toast message as a backup
-                    Toast.makeText(CaretakerMonitorActivity.this, alertMessage, Toast.LENGTH_LONG).show();
-
-                    // Create a notification
-                    createNotification(alertMessage);
-                }
-            }
-        }
-    };
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        IntentFilter filter = new IntentFilter("com.example.elderly_health_monitor_app.TEMPERATURE_ALERT");
-        registerReceiver(temperatureAlertReceiver, filter);
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        unregisterReceiver(temperatureAlertReceiver);
-    }
-
-    private void createNotification(String alertMessage) {
-        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Patient Alerts", NotificationManager.IMPORTANCE_HIGH);
-            notificationManager.createNotificationChannel(channel);
-        }
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, patientID.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.baseline_crisis_alert_24)
-                .setContentTitle("Temperature Alert")
-                .setContentText(alertMessage)
+                .setContentTitle(title)
+                .setContentText(message + "\nPatient: " + patientName + " (" + patientID + ")")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setAutoCancel(true);
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent);
 
-        notificationManager.notify(1, builder.build());
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+        notificationManager.notify(patientID.hashCode(), builder.build()); // Ensure unique notification ID per patient
+    }
+
+    private void showAlertDialog(String title, String message) {
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton("OK", null)
+                .setNegativeButton("View Patient Info", (dialog, which) -> {
+                    Intent intent = new Intent(this, PatientInfoActivity.class);
+                    intent.putExtra("patientId", getIntent().getStringExtra("patientID"));
+                    intent.putExtra("caretakerId", caretakerId);
+                    startActivity(intent);
+                })
+                .show();
+    }
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = "Health Monitor Alerts";
+            String description = "Notifications for health monitor alerts";
+            int importance = NotificationManager.IMPORTANCE_HIGH;
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            channel.setDescription(description);
+
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+        }
     }
 }
+//EOF
