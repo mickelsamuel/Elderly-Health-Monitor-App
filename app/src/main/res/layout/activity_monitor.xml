@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -11,7 +10,7 @@
         android:id="@+id/userNameText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="@string/user_name_placeholder"
+        android:text="User Name"
         android:textSize="24sp"
         app:layout_constraintEnd_toStartOf="@+id/settingsButton"
         app:layout_constraintStart_toStartOf="parent"
@@ -33,12 +32,12 @@
         android:id="@+id/statusSummary"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="@string/status_summary_placeholder"
+        android:text="Status Summary"
         android:textSize="18sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/userNameText"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginBottom="8dp" />
 
     <!-- Heart Rate CardView -->
     <androidx.cardview.widget.CardView
@@ -46,6 +45,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="24dp"
+        android:layout_marginTop="16dp"
         android:clickable="true"
         android:focusable="true"
         app:layout_constraintEnd_toEndOf="parent"
@@ -77,7 +77,7 @@
                     android:id="@+id/heartRateTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/heart_rate" />
+                    android:text="Heart Rate" />
 
                 <TextView
                     android:id="@+id/heartRateText"
@@ -125,7 +125,7 @@
                     android:id="@+id/temperatureTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/temperature" />
+                    android:text="Temperature" />
 
                 <TextView
                     android:id="@+id/temperatureText"
@@ -167,45 +167,57 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/accelerometerXTitle"
+                    android:id="@+id/accelerometerTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="X:" />
+                    android:text="Accelerometer" />
 
-                <TextView
-                    android:id="@+id/accelerometerXValue"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="0.1"
-                    android:layout_marginEnd="16dp" />
+                    android:orientation="horizontal">
 
-                <TextView
-                    android:id="@+id/accelerometerYTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Y:" />
+                    <TextView
+                        android:id="@+id/accelerometerXTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="X: " />
 
-                <TextView
-                    android:id="@+id/accelerometerYValue"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0.2"
-                    android:layout_marginEnd="16dp" />
+                    <TextView
+                        android:id="@+id/accelerometerXValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.1"
+                        android:layout_marginEnd="16dp" />
 
-                <TextView
-                    android:id="@+id/accelerometerZTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Z:" />
+                    <TextView
+                        android:id="@+id/accelerometerYTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Y: " />
 
-                <TextView
-                    android:id="@+id/accelerometerZValue"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="9.8" />
+                    <TextView
+                        android:id="@+id/accelerometerYValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.2"
+                        android:layout_marginEnd="16dp" />
+
+                    <TextView
+                        android:id="@+id/accelerometerZTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Z: " />
+
+                    <TextView
+                        android:id="@+id/accelerometerZValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="9.8" />
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
     </androidx.cardview.widget.CardView>
@@ -216,8 +228,19 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="@string/call_for_help"
+        android:text="Call for Help"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- Change Status Button -->
+    <Button
+        android:id="@+id/changeStatusButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Change Status"
+        app:layout_constraintBottom_toTopOf="@id/callForHelpButton"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

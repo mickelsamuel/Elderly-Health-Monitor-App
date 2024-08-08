@@ -1,17 +1,24 @@
 package com.example.elderly_health_monitor_app;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 import android.Manifest;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CountDownTimer;
+import android.os.Handler;
+import android.telephony.SmsManager;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
@@ -20,10 +27,8 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.cardview.widget.CardView;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 
 import com.google.firebase.database.DataSnapshot;
@@ -39,7 +44,7 @@ public class MonitorActivity extends AppCompatActivity {
 
     private TextView temperatureReading, accelerometerXReading, accelerometerYReading, accelerometerZReading, heartRateReading, userNameText, statusSummary;
     private View temperatureStatus, accelerometerStatus, heartRateStatus;
-    private Button callForHelpButton;
+    private Button callForHelpButton, changeStatusButton;
     private ImageButton settingsButton;
     private CardView heartRateCard, temperatureCard, accelerometerCard;
 
@@ -50,13 +55,38 @@ public class MonitorActivity extends AppCompatActivity {
     private DatabaseReference heartRateRef, temperatureRef, userRef, accelerometerRef;
 
     private String userId;
+    private Patient patient;
+
+    // Constants for SMS permission request code
+    private static final int SMS_PERMISSION_REQUEST_CODE = 101;
+
+    // Thresholds for the indicators
+    private static final float TEMPERATURE_YELLOW_LOW_THRESHOLD = 36.1f;
+    private static final float TEMPERATURE_RED_LOW_THRESHOLD = 35.0f;
+    private static final float TEMPERATURE_YELLOW_HIGH_THRESHOLD = 37.5f;
+    private static final float TEMPERATURE_RED_HIGH_THRESHOLD = 38.3f;
+
+    private static final int HEART_RATE_YELLOW_HIGH_THRESHOLD = 130;
+    private static final int HEART_RATE_RED_HIGH_THRESHOLD = 150;
+    private static final int HEART_RATE_YELLOW_LOW_THRESHOLD = 55;
+    private static final int HEART_RATE_RED_LOW_THRESHOLD = 50;
+
+    private static final double ACCELEROMETER_YELLOW_THRESHOLD = 2.0;
+    private static final double ACCELEROMETER_RED_THRESHOLD = 3.0;
+
+    // Notification channel constants
+    private static final String CHANNEL_ID = "health_monitor_notifications";
+    private static final int NOTIFICATION_ID_YELLOW = 1;
+    private static final int NOTIFICATION_ID_RED = 2;
+
+    // SharedPreferences constants for alert suppression
+    private static final String PREFS_NAME = "ElderlyHealthMonitorPrefs";
+    private static final String PREFS_KEY_ALERT_SUPPRESSION_END_TIME = "alertSuppressionEndTime";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_monitor);
-
-        Log.d(TAG, "onCreate: Initializing views");
 
         // Initialize UI elements
         userNameText = findViewById(R.id.userNameText);
@@ -71,6 +101,7 @@ public class MonitorActivity extends AppCompatActivity {
         heartRateStatus = findViewById(R.id.heartRateStatus);
         callForHelpButton = findViewById(R.id.callForHelpButton);
         settingsButton = findViewById(R.id.settingsButton);
+        changeStatusButton = findViewById(R.id.changeStatusButton);
 
         heartRateCard = findViewById(R.id.heartRateCard);
         temperatureCard = findViewById(R.id.temperatureCard);
@@ -86,8 +117,6 @@ public class MonitorActivity extends AppCompatActivity {
         Intent intent = getIntent();
         userId = intent.getStringExtra("userId");
 
-        Log.d(TAG, "onCreate: Received userId: " + userId);
-
         userRef = firebaseDatabase.getReference("users").child(userId);
         setupListeners();
 
@@ -95,9 +124,31 @@ public class MonitorActivity extends AppCompatActivity {
         IntentFilter filter = new IntentFilter("com.example.elderly_health_monitor_app.UPDATE_FONT_SIZE");
         registerReceiver(new FontSizeUpdateReceiver(), filter);
 
-
         // Set up Firebase listeners for real-time updates
         setupFirebaseListeners();
+
+        // Initialize patient object
+        patient = new Patient();
+
+        // Request SMS permission
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.SEND_SMS}, SMS_PERMISSION_REQUEST_CODE);
+        }
+
+        // Create notification channel
+        createNotificationChannel();
+
+        // Check if alerts are currently suppressed
+        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        long alertSuppressionEndTime = preferences.getLong(PREFS_KEY_ALERT_SUPPRESSION_END_TIME, 0);
+        if (System.currentTimeMillis() < alertSuppressionEndTime) {
+            // Alerts are suppressed, set up suppression end time check
+            Handler handler = new Handler();
+            handler.postDelayed(() -> {
+                // Re-enable alerts after suppression period ends
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().remove(PREFS_KEY_ALERT_SUPPRESSION_END_TIME).apply();
+            }, alertSuppressionEndTime - System.currentTimeMillis());
+        }
     }
 
     /**
@@ -106,7 +157,6 @@ public class MonitorActivity extends AppCompatActivity {
     private void setupListeners() {
         callForHelpButton.setOnClickListener(v -> showOptionDialog());
         settingsButton.setOnClickListener(v -> {
-            Log.d(TAG, "settingsButton: Passing userId to SettingsActivity: " + userId);
             Intent intent = new Intent(MonitorActivity.this, SettingsActivity.class);
             intent.putExtra("userId", userId);
             startActivity(intent);
@@ -114,6 +164,7 @@ public class MonitorActivity extends AppCompatActivity {
         heartRateCard.setOnClickListener(v -> startActivity(new Intent(MonitorActivity.this, HeartRateActivity.class)));
         temperatureCard.setOnClickListener(v -> startActivity(new Intent(MonitorActivity.this, TemperatureActivity.class)));
         accelerometerCard.setOnClickListener(v -> startActivity(new Intent(MonitorActivity.this, AccelerometerActivity.class)));
+        changeStatusButton.setOnClickListener(v -> showChangeStatusDialog());
     }
 
     @Override
@@ -128,16 +179,15 @@ public class MonitorActivity extends AppCompatActivity {
      * Refresh user details from the database
      */
     private void refreshUserDetails() {
-        Log.d(TAG, "refreshUserDetails: Fetching user details for userId: " + userId);
         userRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()) {
                     String firstName = dataSnapshot.child("firstName").getValue(String.class);
                     String lastName = dataSnapshot.child("lastName").getValue(String.class);
+                    patient.setFirstName(firstName);
+                    patient.setLastName(lastName);
                     userNameText.setText(String.format("Hello, %s %s \n(%s)\n", firstName, lastName, userId));
-
-                    Log.d(TAG, "refreshUserDetails: User details found - " + firstName + " " + lastName);
 
                     // Check for caretaker details
                     if (dataSnapshot.child("caretakerName").exists() && dataSnapshot.child("caretakerID").exists()) {
@@ -145,17 +195,15 @@ public class MonitorActivity extends AppCompatActivity {
                         String caretakerID = dataSnapshot.child("caretakerID").getValue(String.class);
                         statusSummary.setText(String.format("Your caretaker is %s (%s)\n\n", caretakerName, caretakerID));
                     } else {
-                        statusSummary.setText("You do not have a caretaker registered yet.\n\n");
+                        statusSummary.setText("You do not have a caretaker registered yet.\n");
                     }
                 } else {
-                    Log.e(TAG, "No data found for user");
                     Toast.makeText(MonitorActivity.this, "No user data found", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                Log.e(TAG, "Failed to refresh user data", databaseError.toException());
                 Toast.makeText(MonitorActivity.this, "Failed to refresh user data", Toast.LENGTH_SHORT).show();
             }
         });
@@ -168,13 +216,12 @@ public class MonitorActivity extends AppCompatActivity {
         userRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                // Update user details
                 if (dataSnapshot.exists()) {
                     String firstName = dataSnapshot.child("firstName").getValue(String.class);
                     String lastName = dataSnapshot.child("lastName").getValue(String.class);
+                    patient.setFirstName(firstName);
+                    patient.setLastName(lastName);
                     userNameText.setText(String.format("Hello, %s %s \n(%s)\n", firstName, lastName, userId));
-
-                    Log.d(TAG, "setupFirebaseListeners: User details updated - " + firstName + " " + lastName);
 
                     // Check for caretaker details
                     if (dataSnapshot.child("caretakerName").exists() && dataSnapshot.child("caretakerID").exists()) {
@@ -185,14 +232,12 @@ public class MonitorActivity extends AppCompatActivity {
                         statusSummary.setText("You do not have a caretaker registered yet.\n\n");
                     }
                 } else {
-                    Log.e(TAG, "No data found for user");
                     Toast.makeText(MonitorActivity.this, "No user data found", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                Log.e(TAG, "Failed to refresh user data", databaseError.toException());
                 Toast.makeText(MonitorActivity.this, "Failed to refresh user data", Toast.LENGTH_SHORT).show();
             }
         });
@@ -200,11 +245,12 @@ public class MonitorActivity extends AppCompatActivity {
         heartRateRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                // Update heart rate data
                 for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
                     Map<String, Object> heartRateData = (Map<String, Object>) snapshot.getValue();
                     if (heartRateData != null && userId.equals(heartRateData.get("id"))) {
-                        heartRateReading.setText(String.valueOf(heartRateData.get("heartVal")) + " bpm");
+                        patient.setHeartRate(((Long) heartRateData.get("heartVal")).intValue());
+                        heartRateReading.setText(String.valueOf(patient.getHeartRate()) + " bpm");
+                        updateIndicators();
                         break;
                     }
                 }
@@ -219,11 +265,12 @@ public class MonitorActivity extends AppCompatActivity {
         temperatureRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                // Update temperature data
                 for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
                     Map<String, Object> temperatureData = (Map<String, Object>) snapshot.getValue();
                     if (temperatureData != null && userId.equals(temperatureData.get("id"))) {
-                        temperatureReading.setText(String.valueOf(temperatureData.get("temperatureVal")) + "°C");
+                        patient.setTemperature(((Double) temperatureData.get("temperatureVal")).floatValue());
+                        temperatureReading.setText(String.valueOf(patient.getTemperature()) + "°C");
+                        updateIndicators();
                         break;
                     }
                 }
@@ -238,13 +285,16 @@ public class MonitorActivity extends AppCompatActivity {
         accelerometerRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                // Update accelerometer data
                 for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
                     Map<String, Object> accelerometerData = (Map<String, Object>) snapshot.getValue();
                     if (accelerometerData != null && userId.equals(accelerometerData.get("id"))) {
-                        accelerometerXReading.setText(String.valueOf(accelerometerData.get("accelerometerXVal")) + "g");
-                        accelerometerYReading.setText(String.valueOf(accelerometerData.get("accelerometerYVal")) + "g");
-                        accelerometerZReading.setText(String.valueOf(accelerometerData.get("accelerometerZVal")) + "g");
+                        patient.setAccelerometerX((Double) accelerometerData.get("accelerometerXVal"));
+                        patient.setAccelerometerY((Double) accelerometerData.get("accelerometerYVal"));
+                        patient.setAccelerometerZ((Double) accelerometerData.get("accelerometerZVal"));
+                        accelerometerXReading.setText(String.format("%.2fg", patient.getAccelerometerX()));
+                        accelerometerYReading.setText(String.format("%.2fg", patient.getAccelerometerY()));
+                        accelerometerZReading.setText(String.format("%.2fg", patient.getAccelerometerZ()));
+                        updateIndicators();
                         break;
                     }
                 }
@@ -274,18 +324,19 @@ public class MonitorActivity extends AppCompatActivity {
         // Update font size for titles if they exist
         TextView heartRateTitle = findViewById(R.id.heartRateTitle);
         TextView temperatureTitle = findViewById(R.id.temperatureTitle);
+        TextView accelerometerTitle = findViewById(R.id.accelerometerTitle);
         TextView accelerometerXTitle = findViewById(R.id.accelerometerXTitle);
         TextView accelerometerYTitle = findViewById(R.id.accelerometerYTitle);
         TextView accelerometerZTitle = findViewById(R.id.accelerometerZTitle);
 
         if (heartRateTitle != null) heartRateTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
         if (temperatureTitle != null) temperatureTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
+        if (accelerometerTitle != null) accelerometerTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
         if (accelerometerXTitle != null) accelerometerXTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
         if (accelerometerYTitle != null) accelerometerYTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
         if (accelerometerZTitle != null) accelerometerZTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
 
         // Update font size for the button
-        Button callForHelpButton = findViewById(R.id.callForHelpButton);
         callForHelpButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize);
     }
 
@@ -353,7 +404,6 @@ public class MonitorActivity extends AppCompatActivity {
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                Log.e(TAG, "Failed to fetch phone number", databaseError.toException());
                 Toast.makeText(MonitorActivity.this, "Failed to fetch phone number", Toast.LENGTH_SHORT).show();
             }
         });
@@ -374,6 +424,237 @@ public class MonitorActivity extends AppCompatActivity {
     }
 
     /**
+     * Send an SMS to the given phone number
+     * @param phoneNumber The phone number to send the SMS to
+     * @param message The message to send
+     */
+    private void sendSms(String phoneNumber, String message) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.SEND_SMS}, SMS_PERMISSION_REQUEST_CODE);
+        } else {
+            SmsManager smsManager = SmsManager.getDefault();
+            smsManager.sendTextMessage(phoneNumber, null, message, null, null);
+            Toast.makeText(this, "SMS sent to " + phoneNumber, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Update indicators based on sensor data and send notifications
+     */
+    private void updateIndicators() {
+        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        long alertSuppressionEndTime = preferences.getLong(PREFS_KEY_ALERT_SUPPRESSION_END_TIME, 0);
+        if (System.currentTimeMillis() < alertSuppressionEndTime) {
+            // Alerts are currently suppressed, do not update indicators or send notifications
+            return;
+        }
+
+        // Temperature indicator
+        if (patient.getTemperature() >= TEMPERATURE_RED_HIGH_THRESHOLD || patient.getTemperature() < TEMPERATURE_RED_LOW_THRESHOLD) {
+            temperatureStatus.setBackgroundResource(R.drawable.indicator_red);
+            showAlertConfirmation("Temperature Alert", "Patient " + patient.getFirstName() + " " + patient.getLastName() + " has an abnormal temperature.");
+            sendNotification("Critical Temperature Alert", "Patient " + patient.getFirstName() + " " + patient.getLastName() + " has a critical temperature. Please open the app. If no action is taken in 30 seconds, it will alert the caretaker or emergency contact.");
+        } else if (patient.getTemperature() >= TEMPERATURE_YELLOW_HIGH_THRESHOLD || patient.getTemperature() < TEMPERATURE_YELLOW_LOW_THRESHOLD) {
+            temperatureStatus.setBackgroundResource(R.drawable.indicator_yellow);
+            sendNotification("Temperature Alert", "Patient " + patient.getFirstName() + " " + patient.getLastName() + " has an abnormal temperature.");
+        } else {
+            temperatureStatus.setBackgroundResource(R.drawable.indicator_green);
+        }
+
+        // Heart rate indicator
+        if (patient.getHeartRate() >= HEART_RATE_RED_HIGH_THRESHOLD || patient.getHeartRate() < HEART_RATE_RED_LOW_THRESHOLD) {
+            heartRateStatus.setBackgroundResource(R.drawable.indicator_red);
+            showAlertConfirmation("Heart Rate Alert", "Patient " + patient.getFirstName() + " " + patient.getLastName() + " has an abnormal heart rate.");
+            sendNotification("Critical Heart Rate Alert", "Patient " + patient.getFirstName() + " " + patient.getLastName() + " has a critical heart rate. Please open the app. If no action is taken in 30 seconds, it will alert the caretaker or emergency contact.");
+        } else if (patient.getHeartRate() >= HEART_RATE_YELLOW_HIGH_THRESHOLD || patient.getHeartRate() < HEART_RATE_YELLOW_LOW_THRESHOLD) {
+            heartRateStatus.setBackgroundResource(R.drawable.indicator_yellow);
+            sendNotification("Heart Rate Alert", "Patient " + patient.getFirstName() + " " + patient.getLastName() + " has an abnormal heart rate.");
+        } else {
+            heartRateStatus.setBackgroundResource(R.drawable.indicator_green);
+        }
+
+        // Accelerometer indicator
+        double maxAcceleration = Math.max(Math.max(patient.getAccelerometerX(), patient.getAccelerometerY()), patient.getAccelerometerZ());
+        if (maxAcceleration >= ACCELEROMETER_RED_THRESHOLD) {
+            accelerometerStatus.setBackgroundResource(R.drawable.indicator_red);
+            showAlertConfirmation("Accelerometer Alert", "Patient " + patient.getFirstName() + " " + patient.getLastName() + " has a significant movement detected.");
+            sendNotification("Critical Accelerometer Alert", "Patient " + patient.getFirstName() + " " + patient.getLastName() + " has significant movement detected. Please open the app. If no action is taken in 30 seconds, it will alert the caretaker or emergency contact.");
+        } else if (maxAcceleration >= ACCELEROMETER_YELLOW_THRESHOLD) {
+            accelerometerStatus.setBackgroundResource(R.drawable.indicator_yellow);
+            sendNotification("Accelerometer Alert", "Patient " + patient.getFirstName() + " " + patient.getLastName() + " has significant movement detected.");
+        } else {
+            accelerometerStatus.setBackgroundResource(R.drawable.indicator_green);
+        }
+
+        // Update the UI readings
+        heartRateReading.setText(String.valueOf(patient.getHeartRate()) + " bpm");
+        temperatureReading.setText(String.valueOf(patient.getTemperature()) + "°C");
+        accelerometerXReading.setText(String.format("%.2fg", patient.getAccelerometerX()));
+        accelerometerYReading.setText(String.format("%.2fg", patient.getAccelerometerY()));
+        accelerometerZReading.setText(String.format("%.2fg", patient.getAccelerometerZ()));
+    }
+
+    private void showAlertConfirmation(String title, String message) {
+        userRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                boolean hasCaretaker = dataSnapshot.child("caretakerName").exists() && dataSnapshot.child("caretakerID").exists();
+                String emergencyContact = dataSnapshot.child("emergencyContact").getValue(String.class);
+                String caretakerID = dataSnapshot.child("caretakerID").getValue(String.class);
+                String caretakerName = dataSnapshot.child("caretakerName").getValue(String.class);
+                String caretakerPhoneNumber = dataSnapshot.child("caretakerPhoneNumber").getValue(String.class);
+
+                AlertDialog.Builder builder = new AlertDialog.Builder(MonitorActivity.this);
+                builder.setTitle(title)
+                        .setMessage(message + "\n\nDo you want to alert your " + (hasCaretaker ? "caretaker" : "emergency contact") + "?\n\nThis alert will be sent in 30 seconds.")
+                        .setCancelable(false)
+                        .setPositiveButton("Yes", null)
+                        .setNegativeButton("No", null)
+                        .setNeutralButton("Disable alerts for", null);
+
+                final AlertDialog alertDialog = builder.create();
+                alertDialog.show();
+
+                // Countdown timer
+                new CountDownTimer(30000, 1000) {
+                    public void onTick(long millisUntilFinished) {
+                        alertDialog.setMessage(message + "\n\nDo you want to alert your " + (hasCaretaker ? "caretaker" : "emergency contact") + "?\n\nThis alert will be sent in " + millisUntilFinished / 1000 + " seconds.");
+                    }
+
+                    public void onFinish() {
+                        if (alertDialog.isShowing()) {
+                            if (hasCaretaker) {
+                                sendAlertToCaretaker(title, message, caretakerID, caretakerName, caretakerPhoneNumber);
+                            } else if (emergencyContact != null) {
+                                sendSms(emergencyContact, "Alert: " + message);
+                            } else {
+                                Toast.makeText(MonitorActivity.this, "No emergency contact registered!", Toast.LENGTH_LONG).show();
+                            }
+                            alertDialog.dismiss();
+                        }
+                    }
+                }.start();
+
+                alertDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                    if (hasCaretaker) {
+                        sendAlertToCaretaker(title, message, caretakerID, caretakerName, caretakerPhoneNumber);
+                    } else if (emergencyContact != null) {
+                        sendSms(emergencyContact, "Alert: " + message);
+                    } else {
+                        Toast.makeText(MonitorActivity.this, "No emergency contact registered!", Toast.LENGTH_LONG).show();
+                    }
+                    alertDialog.dismiss();
+                });
+
+                alertDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener(v -> alertDialog.dismiss());
+
+                alertDialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
+                    AlertDialog.Builder disableAlertBuilder = new AlertDialog.Builder(MonitorActivity.this);
+                    disableAlertBuilder.setTitle("Disable alerts for")
+                            .setItems(new String[]{"30 minutes", "1 hour", "2 hours"}, (dialog, which) -> {
+                                long suppressionTime = 0;
+                                if (which == 0) {
+                                    suppressionTime = 30 * 60 * 1000; // 30 minutes
+                                } else if (which == 1) {
+                                    suppressionTime = 60 * 60 * 1000; // 1 hour
+                                } else if (which == 2) {
+                                    suppressionTime = 2 * 60 * 60 * 1000; // 2 hours
+                                }
+
+                                long suppressionEndTime = System.currentTimeMillis() + suppressionTime;
+                                SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
+                                editor.putLong(PREFS_KEY_ALERT_SUPPRESSION_END_TIME, suppressionEndTime);
+                                editor.apply();
+
+                                // Dismiss both dialogs
+                                alertDialog.dismiss();
+                                dialog.dismiss();
+                            }).show();
+                });
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, "Failed to read user data", databaseError.toException());
+            }
+        });
+    }
+
+    private void sendAlertToCaretaker(String title, String message, String caretakerID, String caretakerName, String caretakerPhoneNumber) {
+        Log.d(TAG, "sendAlertToCaretaker: title=" + title + ", message=" + message + ", caretakerID=" + caretakerID + ", caretakerName=" + caretakerName);
+
+        DatabaseReference notificationsRef = FirebaseDatabase.getInstance().getReference("notifications").child(caretakerID);
+        Map<String, Object> notificationData = new HashMap<>();
+        notificationData.put("title", title);
+        notificationData.put("message", message);
+        notificationData.put("patientID", userId);
+        notificationData.put("patientName", patient.getFirstName() + " " + patient.getLastName());
+
+        notificationsRef.push().setValue(notificationData).addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                Log.d(TAG, "sendAlertToCaretaker: Caretaker alerted successfully");
+                Toast.makeText(MonitorActivity.this, "Caretaker alerted successfully", Toast.LENGTH_SHORT).show();
+            } else {
+                Log.e(TAG, "sendAlertToCaretaker: Failed to alert caretaker", task.getException());
+                Toast.makeText(MonitorActivity.this, "Failed to alert caretaker", Toast.LENGTH_SHORT).show();
+            }
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "sendAlertToCaretaker: Error alerting caretaker", e);
+        });
+    }
+
+    private void showChangeStatusDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(MonitorActivity.this);
+        builder.setTitle("Change Sensor Status")
+                .setItems(new String[]{"Heart Rate - Green", "Heart Rate - Yellow", "Heart Rate - Red",
+                        "Temperature - Green", "Temperature - Yellow", "Temperature - Red",
+                        "Accelerometer - Green", "Accelerometer - Yellow", "Accelerometer - Red"}, (dialog, which) -> {
+                    switch (which) {
+                        case 0:
+                            patient.setHeartRate(80); // Green heart rate
+                            break;
+                        case 1:
+                            patient.setHeartRate(140); // Yellow heart rate
+                            break;
+                        case 2:
+                            patient.setHeartRate(160); // Red heart rate
+                            break;
+                        case 3:
+                            patient.setTemperature(36.5f); // Green temperature
+                            break;
+                        case 4:
+                            patient.setTemperature(37.6f); // Yellow temperature
+                            break;
+                        case 5:
+                            patient.setTemperature(38.4f); // Red temperature
+                            break;
+                        case 6:
+                            patient.setAccelerometerX(0.5); // Green accelerometer
+                            patient.setAccelerometerY(0.5);
+                            patient.setAccelerometerZ(0.5);
+                            break;
+                        case 7:
+                            patient.setAccelerometerX(2.5); // Yellow accelerometer
+                            patient.setAccelerometerY(2.5);
+                            patient.setAccelerometerZ(2.5);
+                            break;
+                        case 8:
+                            patient.setAccelerometerX(3.5); // Red accelerometer
+                            patient.setAccelerometerY(3.5);
+                            patient.setAccelerometerZ(3.5);
+                            break;
+                    }
+                    updateIndicators(); // Update indicators and trigger alerts if needed
+                }).show();
+    }
+
+    private void notifyCaretaker(String alertType) {
+        // Logic to notify the caretaker
+        Toast.makeText(MonitorActivity.this, "Caretaker alerted for " + alertType, Toast.LENGTH_LONG).show();
+        // Implement actual notification logic here
+    }
+
+    /**
      * Broadcast receiver for updating font size
      */
     private class FontSizeUpdateReceiver extends BroadcastReceiver {
@@ -383,4 +664,51 @@ public class MonitorActivity extends AppCompatActivity {
             updateFontSize(fontSize);
         }
     }
+
+    // Handling the result of the permission request
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == SMS_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "SMS permission granted", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "SMS permission denied", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    /**
+     * Create a notification channel
+     */
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = "Health Monitor Alerts";
+            String description = "Notifications for health monitor alerts";
+            int importance = NotificationManager.IMPORTANCE_HIGH;
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            channel.setDescription(description);
+
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+        }
+    }
+
+    /**
+     * Send a notification
+     */
+    private void sendNotification(String title, String message) {
+        Log.d(TAG, "sendNotification: title=" + title + ", message=" + message);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.drawable.baseline_crisis_alert_24)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true);
+
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+        notificationManager.notify(title.contains("Critical") ? NOTIFICATION_ID_RED : NOTIFICATION_ID_YELLOW, builder.build());
+    }
 }
+//EOF

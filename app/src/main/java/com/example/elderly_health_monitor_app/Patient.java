@@ -1,5 +1,11 @@
 package com.example.elderly_health_monitor_app;
 
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
 public class Patient {
     // Patient attributes
     private String firstName;
@@ -232,5 +238,64 @@ public class Patient {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    // Method to fetch temperature data from Firebase
+    public void fetchTemperatureData() {
+        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("temperatureValues");
+        databaseReference.orderByChild("id").equalTo(this.patientID).addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    temperature = snapshot.child("temperatureVal").getValue(Float.class);
+                    // Process timestamp if needed
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                // Handle database error
+            }
+        });
+    }
+
+    // Method to fetch heart rate data from Firebase
+    public void fetchHeartRateData() {
+        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("heartRateValues");
+        databaseReference.orderByChild("id").equalTo(this.patientID).addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    heartRate = snapshot.child("heartVal").getValue(Integer.class);
+                    // Process timestamp if needed
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                // Handle database error
+            }
+        });
+    }
+
+    // Method to fetch accelerometer data from Firebase
+    public void fetchAccelerometerData() {
+        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("accelerometerValues");
+        databaseReference.orderByChild("id").equalTo(this.patientID).addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    accelerometerX = snapshot.child("accelerometerXVal").getValue(Double.class);
+                    accelerometerY = snapshot.child("accelerometerYVal").getValue(Double.class);
+                    accelerometerZ = snapshot.child("accelerometerZVal").getValue(Double.class);
+                    // Process timestamp if needed
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                // Handle database error
+            }
+        });
     }
 }
