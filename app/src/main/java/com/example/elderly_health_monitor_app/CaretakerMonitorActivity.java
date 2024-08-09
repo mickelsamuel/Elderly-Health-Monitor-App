@@ -506,31 +506,9 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
     }
 
     private void setupFirebaseListeners() {
-        // Listen for changes in the patient IDs list
-        databaseRef.child(caretakerId).child("patientIDs").addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                List<String> patientIDs = new ArrayList<>();
-                if (dataSnapshot.exists()) {
-                    for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
-                        String patientId = snapshot.getValue(String.class);
-                        if (patientId != null) {
-                            patientIDs.add(patientId);
-                        }
-                    }
-                }
-                Log.d(TAG, "setupFirebaseListeners: Patient IDs updated: " + patientIDs);
-                loadPatientDetails(patientIDs);
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError databaseError) {
-                Log.e(TAG, "setupFirebaseListeners: Failed to listen for patient IDs", databaseError.toException());
-            }
-        });
-
         // Listen for notifications for the caretaker
         DatabaseReference notificationsRef = FirebaseDatabase.getInstance().getReference("notifications").child(caretakerId);
+
         notificationsRef.addChildEventListener(new ChildEventListener() {
             @Override
             public void onChildAdded(@NonNull DataSnapshot dataSnapshot, @Nullable String previousChildName) {
@@ -542,10 +520,13 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
                         String patientID = (String) notificationData.get("patientID");
                         String patientName = (String) notificationData.get("patientName");
 
-                        // Show the notification
+                        // Show the notification pop-up
+                        showNotificationDialog(title, message, patientID, patientName);
+
+                        // Show the notification on the phone
                         showNotification(title, message, patientID, patientName);
 
-                        // Remove the notification node after processing
+                        // Remove the notification after processing
                         dataSnapshot.getRef().removeValue();
                     }
                 }
@@ -553,14 +534,17 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
             @Override
             public void onChildChanged(@NonNull DataSnapshot dataSnapshot, @Nullable String previousChildName) {
+                // You can leave this empty if not needed
             }
 
             @Override
             public void onChildRemoved(@NonNull DataSnapshot dataSnapshot) {
+                // You can leave this empty if not needed
             }
 
             @Override
             public void onChildMoved(@NonNull DataSnapshot dataSnapshot, @Nullable String previousChildName) {
+                // You can leave this empty if not needed
             }
 
             @Override
@@ -580,7 +564,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         PendingIntent pendingIntent = PendingIntent.getActivity(this, patientID.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.drawable.baseline_crisis_alert_24)
+                .setSmallIcon(R.drawable.baseline_crisis_alert_24)  // Change this to your app's notification icon
                 .setContentTitle(title)
                 .setContentText(message + "\nPatient: " + patientName + " (" + patientID + ")")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -616,6 +600,20 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
             NotificationManager notificationManager = getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
         }
+    }
+
+    private void showNotificationDialog(String title, String message, String patientID, String patientName) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(CaretakerMonitorActivity.this);
+        builder.setTitle(title)
+                .setMessage(message + "\n\nPatient: " + patientName + " (ID: " + patientID + ")")
+                .setPositiveButton("OK", (dialog, id) -> dialog.dismiss())
+                .setNegativeButton("Patient Info", (dialog, id) -> {
+                    Intent intent = new Intent(CaretakerMonitorActivity.this, PatientInfoActivity.class);
+                    intent.putExtra("patientId", patientID);
+                    intent.putExtra("caretakerId", caretakerId);
+                    startActivity(intent);
+                })
+                .show();
     }
 }
 //EOF

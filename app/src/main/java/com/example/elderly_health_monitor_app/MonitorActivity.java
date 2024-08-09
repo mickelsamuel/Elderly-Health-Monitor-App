@@ -227,7 +227,7 @@ public class MonitorActivity extends AppCompatActivity {
                     if (dataSnapshot.child("caretakerName").exists() && dataSnapshot.child("caretakerID").exists()) {
                         String caretakerName = dataSnapshot.child("caretakerName").getValue(String.class);
                         String caretakerID = dataSnapshot.child("caretakerID").getValue(String.class);
-                        statusSummary.setText(String.format("Your caretaker is %s (%s)\n\n", caretakerName, caretakerID));
+                        statusSummary.setText(String.format("Your caretaker is %s (%s)\n", caretakerName, caretakerID));
                     } else {
                         statusSummary.setText("You do not have a caretaker registered yet.\n\n");
                     }
@@ -581,14 +581,16 @@ public class MonitorActivity extends AppCompatActivity {
     }
 
     private void sendAlertToCaretaker(String title, String message, String caretakerID, String caretakerName, String caretakerPhoneNumber) {
-        Log.d(TAG, "sendAlertToCaretaker: title=" + title + ", message=" + message + ", caretakerID=" + caretakerID + ", caretakerName=" + caretakerName);
-
         DatabaseReference notificationsRef = FirebaseDatabase.getInstance().getReference("notifications").child(caretakerID);
+
         Map<String, Object> notificationData = new HashMap<>();
         notificationData.put("title", title);
         notificationData.put("message", message);
         notificationData.put("patientID", userId);
         notificationData.put("patientName", patient.getFirstName() + " " + patient.getLastName());
+        notificationData.put("caretakerID", caretakerID);
+        notificationData.put("caretakerName", caretakerName);
+        notificationData.put("caretakerPhoneNumber", caretakerPhoneNumber);
 
         notificationsRef.push().setValue(notificationData).addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
@@ -699,6 +701,11 @@ public class MonitorActivity extends AppCompatActivity {
      */
     private void sendNotification(String title, String message) {
         Log.d(TAG, "sendNotification: title=" + title + ", message=" + message);
+
+        // Adjust message for patient perspective
+        if (message.contains("Patient " + patient.getFirstName() + " " + patient.getLastName())) {
+            message = message.replace("Patient " + patient.getFirstName() + " " + patient.getLastName() + " has", "You have");
+        }
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.baseline_crisis_alert_24)
