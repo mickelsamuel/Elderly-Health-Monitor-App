@@ -30,12 +30,14 @@ import java.util.Locale;
 public class AccelerometerActivity extends AppCompatActivity {
     private static final String TAG = "AccelerometerActivity";
 
+    // UI components
     private ListView listView;
     private ArrayAdapter<String> adapter;
     private ArrayList<String> accelerometerList;
     private GraphView graph;
     private LineGraphSeries<DataPoint> seriesX, seriesY, seriesZ;
 
+    // Firebase database references
     private FirebaseDatabase firebaseDatabase;
     private DatabaseReference accelerometerRef;
 
@@ -44,7 +46,7 @@ public class AccelerometerActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_accelerometer_page);
 
-        // Initialize the back button and list view from the layout
+        // Find the back button and other UI components
         ImageButton backButton = findViewById(R.id.backButton);
         listView = findViewById(R.id.listView);
         graph = findViewById(R.id.graph);
@@ -54,7 +56,7 @@ public class AccelerometerActivity extends AppCompatActivity {
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, accelerometerList);
         listView.setAdapter(adapter);
 
-        // Initialize the graph series for X, Y, and Z axes
+        // Set up the graph series for X, Y, and Z axes
         seriesX = new LineGraphSeries<>();
         seriesY = new LineGraphSeries<>();
         seriesZ = new LineGraphSeries<>();
@@ -110,6 +112,10 @@ public class AccelerometerActivity extends AppCompatActivity {
                     }
                 }
 
+                // Reverse the order of heartRateList to show the newest data first
+                Collections.reverse(accelerometerList);
+                adapter.notifyDataSetChanged();
+
                 // Sort the data points by timestamp
                 sortDataPointsByTimestamp(dataPointsX);
                 sortDataPointsByTimestamp(dataPointsY);
@@ -129,11 +135,8 @@ public class AccelerometerActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Set up the graph with necessary properties and series
-     *
-     * @param graph The GraphView object to set up
-     */
+    //Set up the graph with necessary properties and series
+    // @param graph The GraphView object to set up
     private void setupGraph(GraphView graph) {
         graph.addSeries(seriesX);
         graph.addSeries(seriesY);
@@ -188,12 +191,9 @@ public class AccelerometerActivity extends AppCompatActivity {
         Log.d(TAG, "Data added to list: " + displayText);
     }
 
-    /**
-     * Convert a timestamp to a readable date string
-     *
-     * @param timestamp The timestamp to convert
-     * @return A formatted date string
-     */
+    //Convert a timestamp to a readable date string
+    //param timestamp The timestamp to convert
+    //returns a formatted date string
     private String convertTimestampToReadableDate(Long timestamp) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         Date date = new Date(timestamp);
