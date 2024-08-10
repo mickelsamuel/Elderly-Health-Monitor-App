@@ -830,6 +830,16 @@ public class MonitorActivity extends AppCompatActivity {
         heartRateData.put("heartVal", patient.getHeartRate());
         heartRateRef.setValue(heartRateData);
 
+        // Save the data in a shared node for the caretaker
+        DatabaseReference sharedDataRef = firebaseDatabase.getReference("sharedPatientData").child(userId);
+        Map<String, Object> sharedData = new HashMap<>();
+        sharedData.put("temperature", patient.getTemperature());
+        sharedData.put("heartRate", patient.getHeartRate());
+        sharedData.put("accelerometerX", patient.getAccelerometerX());
+        sharedData.put("accelerometerY", patient.getAccelerometerY());
+        sharedData.put("accelerometerZ", patient.getAccelerometerZ());
+        sharedDataRef.setValue(sharedData);
+
         Log.d(TAG, "Sensor data saved at " + currentTime);
     }
 

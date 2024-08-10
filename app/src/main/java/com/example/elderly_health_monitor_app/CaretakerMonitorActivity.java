@@ -281,9 +281,40 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
         patientNameTextView.setText(patient.getFirstName() != null ? patient.getFirstName() + " " + patient.getLastName() : "N/A");
         patientIDTextView.setText(patient.getId() != null ? patient.getId() : "N/A");
-        patientHeartRateText.setText("Heart Rate: " + (patient.getHeartRate() != 0 ? patient.getHeartRate() : "N/A"));
-        patientTemperatureText.setText("Temperature: " + (patient.getTemperature() != 0 ? patient.getTemperature() + "°C" : "N/A"));
-        patientAccelerometerText.setText("Accelerometer: X: " + patient.getAccelerometerX() + ", Y: " + patient.getAccelerometerY() + ", Z: " + patient.getAccelerometerZ());
+
+        // Set up Firebase listener to monitor changes in the shared data node
+        DatabaseReference sharedDataRef = FirebaseDatabase.getInstance().getReference("sharedPatientData").child(patient.getId());
+        sharedDataRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    Double heartRate = dataSnapshot.child("heartRate").getValue(Double.class);
+                    Double temperature = dataSnapshot.child("temperature").getValue(Double.class);
+                    Double accelerometerX = dataSnapshot.child("accelerometerX").getValue(Double.class);
+                    Double accelerometerY = dataSnapshot.child("accelerometerY").getValue(Double.class);
+                    Double accelerometerZ = dataSnapshot.child("accelerometerZ").getValue(Double.class);
+
+                    // Round the accelerometer values to 2 decimal places
+                    String roundedAccelerometerX = accelerometerX != null ? String.format("%.2f", accelerometerX) : "N/A";
+                    String roundedAccelerometerY = accelerometerY != null ? String.format("%.2f", accelerometerY) : "N/A";
+                    String roundedAccelerometerZ = accelerometerZ != null ? String.format("%.2f", accelerometerZ) : "N/A";
+
+                    patientHeartRateText.setText("Heart Rate: " + (heartRate != null ? heartRate.intValue() + " bpm" : "N/A"));
+                    patientTemperatureText.setText("Temperature: " + (temperature != null ? temperature + "°C" : "N/A"));
+                    patientAccelerometerText.setText("Accelerometer: X: " + roundedAccelerometerX
+                            + ", Y: " + roundedAccelerometerY
+                            + ", Z: " + roundedAccelerometerZ);
+
+                    // Clean up the shared data node after reading
+                    dataSnapshot.getRef().removeValue();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                Log.e(TAG, "Failed to read shared data: " + databaseError.getMessage());
+            }
+        });
 
         removePatientButton.setOnClickListener(v -> removePatient(patient));
         infoPatientButton.setOnClickListener(v -> showPatientInfo(patient));
