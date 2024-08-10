@@ -87,6 +87,10 @@ public class MonitorActivity extends AppCompatActivity {
     private Handler handler = new Handler();
     private Runnable saveDataRunnable;
 
+    private String previousTemperatureKey;
+    private String previousAccelerometerKey;
+    private String previousHeartRateKey;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -795,58 +799,74 @@ public class MonitorActivity extends AppCompatActivity {
     }
 
     //Stops saving the sensor data to Firebase
-    private void stopSavingData() {
-        handler.removeCallbacks(saveDataRunnable);
-    }
-
-    //Saves the current sensor readings to the Firebase database
     private void saveSensorData() {
         // Get the current time
         long currentTime = System.currentTimeMillis();
 
-        // Save temperature data
+        // Round the accelerometer values
+        double roundedX = Math.round(patient.getAccelerometerX() * 100.0) / 100.0;
+        double roundedY = Math.round(patient.getAccelerometerY() * 100.0) / 100.0;
+        double roundedZ = Math.round(patient.getAccelerometerZ() * 100.0) / 100.0;
+
+        // Delete previous temperature data if it exists
+        if (previousTemperatureKey != null) {
+            firebaseDatabase.getReference("temperatureValues").child(previousTemperatureKey).removeValue();
+        }
+        // Save new temperature data and keep track of its key
         DatabaseReference temperatureRef = firebaseDatabase.getReference("temperatureValues").push();
+        previousTemperatureKey = temperatureRef.getKey();
         Map<String, Object> temperatureData = new HashMap<>();
         temperatureData.put("id", userId);
         temperatureData.put("temperatureTime", currentTime);
         temperatureData.put("temperatureVal", patient.getTemperature());
         temperatureRef.setValue(temperatureData);
 
-        // Save accelerometer data
+        // Delete previous accelerometer data if it exists
+        if (previousAccelerometerKey != null) {
+            firebaseDatabase.getReference("accelerometerValues").child(previousAccelerometerKey).removeValue();
+        }
+        // Save new accelerometer data and keep track of its key
         DatabaseReference accelerometerRef = firebaseDatabase.getReference("accelerometerValues").push();
+        previousAccelerometerKey = accelerometerRef.getKey();
         Map<String, Object> accelerometerData = new HashMap<>();
         accelerometerData.put("id", userId);
         accelerometerData.put("accelerometerTime", currentTime);
-        accelerometerData.put("accelerometerXVal", patient.getAccelerometerX());
-        accelerometerData.put("accelerometerYVal", patient.getAccelerometerY());
-        accelerometerData.put("accelerometerZVal", patient.getAccelerometerZ());
+        accelerometerData.put("accelerometerXVal", roundedX);
+        accelerometerData.put("accelerometerYVal", roundedY);
+        accelerometerData.put("accelerometerZVal", roundedZ);
         accelerometerRef.setValue(accelerometerData);
 
-        // Save heart rate data
+        // Delete previous heart rate data if it exists
+        if (previousHeartRateKey != null) {
+            firebaseDatabase.getReference("heartRateValues").child(previousHeartRateKey).removeValue();
+        }
+        // Save new heart rate data and keep track of its key
         DatabaseReference heartRateRef = firebaseDatabase.getReference("heartRateValues").push();
+        previousHeartRateKey = heartRateRef.getKey();
         Map<String, Object> heartRateData = new HashMap<>();
         heartRateData.put("id", userId);
         heartRateData.put("heartTime", currentTime);
         heartRateData.put("heartVal", patient.getHeartRate());
         heartRateRef.setValue(heartRateData);
 
-        // Save the data in a shared node for the caretaker
+        // Save the data in a shared node for the caretaker and patient info
         DatabaseReference sharedDataRef = firebaseDatabase.getReference("sharedPatientData").child(userId);
         Map<String, Object> sharedData = new HashMap<>();
         sharedData.put("temperature", patient.getTemperature());
         sharedData.put("heartRate", patient.getHeartRate());
-        sharedData.put("accelerometerX", patient.getAccelerometerX());
-        sharedData.put("accelerometerY", patient.getAccelerometerY());
-        sharedData.put("accelerometerZ", patient.getAccelerometerZ());
+        sharedData.put("accelerometerX", roundedX);
+        sharedData.put("accelerometerY", roundedY);
+        sharedData.put("accelerometerZ", roundedZ);
         sharedDataRef.setValue(sharedData);
 
-        Log.d(TAG, "Sensor data saved at " + currentTime);
+        Log.d(TAG, "Sensor data saved and previous data deleted at " + currentTime);
     }
+
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        stopSavingData(); // Stop saving data when the activity is destroyed
+        //stopSavingData(); // Stop saving data when the activity is destroyed
     }
 
 }
