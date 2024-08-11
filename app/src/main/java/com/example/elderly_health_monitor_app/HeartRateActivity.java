@@ -111,6 +111,10 @@ public class HeartRateActivity extends AppCompatActivity {
                     }
                 }
 
+                // Reverse the order of heartRateList to show the newest data first
+                Collections.reverse(heartRateList);
+                adapter.notifyDataSetChanged();
+
                 // Sort the data points by timestamp
                 Collections.sort(dataPoints, new Comparator<DataPoint>() {
                     @Override

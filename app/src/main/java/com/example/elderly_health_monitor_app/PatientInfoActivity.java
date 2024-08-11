@@ -146,12 +146,12 @@ public class PatientInfoActivity extends AppCompatActivity {
         heartRateTextView.setText("Heart Rate: " + heartRate + " bpm");
         if (heartRate < 60 || heartRate > 100) {
             heartRateStatus.setBackgroundResource(R.drawable.indicator_red);
-            pn.sendNotification(this, patientNameTextView.getText() + " HEART RATE CRITICAL", "Heart Rate: " + heartRate);
+            sendNotification(patientNameTextView.getText() + " HEART RATE CRITICAL", "Heart Rate: " + heartRate);
         } else if (heartRate >= 60 && heartRate <= 100) {
             heartRateStatus.setBackgroundResource(R.drawable.indicator_green);
         } else {
             heartRateStatus.setBackgroundResource(R.drawable.indicator_yellow);
-            pn.sendNotification(this, patientNameTextView.getText() + " HEART RATE WARNING", "Heart Rate: " + heartRate);
+            sendNotification(patientNameTextView.getText() + " HEART RATE WARNING", "Heart Rate: " + heartRate);
         }
     }
 
@@ -160,12 +160,12 @@ public class PatientInfoActivity extends AppCompatActivity {
         temperatureTextView.setText("Temperature: " + temperature + "°C");
         if (temperature < 36.5 || temperature > 37.5) {
             temperatureStatus.setBackgroundResource(R.drawable.indicator_red);
-            pn.sendNotification(this, patientNameTextView.getText() + " TEMPERATURE CRITICAL", "Temperature: " + temperature);
+            sendNotification(patientNameTextView.getText() + " TEMPERATURE CRITICAL", "Temperature: " + temperature);
         } else if (temperature >= 36.5 && temperature <= 37.5) {
             temperatureStatus.setBackgroundResource(R.drawable.indicator_green);
         } else {
             temperatureStatus.setBackgroundResource(R.drawable.indicator_yellow);
-            pn.sendNotification(this, patientNameTextView.getText() + " TEMPERATURE WARNING", "Temperature: " + temperature);
+            sendNotification(patientNameTextView.getText() + " TEMPERATURE WARNING", "Temperature: " + temperature);
         }
     }
 
@@ -174,12 +174,12 @@ public class PatientInfoActivity extends AppCompatActivity {
         accelerometerTextView.setText("Accelerometer: X: " + x + ", Y: " + y + ", Z: " + z);
         if (Math.abs(x) > 1.0 || Math.abs(y) > 1.0 || Math.abs(z) > 10.0) {
             accelerometerStatus.setBackgroundResource(R.drawable.indicator_red);
-            pn.sendNotification(this, patientNameTextView.getText() + " FALL DETECTED", "");
+            sendNotification(patientNameTextView.getText() + " FALL DETECTED", "");
         } else if (Math.abs(x) <= 1.0 && Math.abs(y) <= 1.0 && Math.abs(z) <= 10.0) {
             accelerometerStatus.setBackgroundResource(R.drawable.indicator_green);
         } else {
             accelerometerStatus.setBackgroundResource(R.drawable.indicator_yellow);
-            pn.sendNotification(this, patientNameTextView.getText() + " FALL POSSIBLE", "");
+            sendNotification(patientNameTextView.getText() + " FALL POSSIBLE", "");
 
         }
     }
@@ -188,46 +188,39 @@ public class PatientInfoActivity extends AppCompatActivity {
      * Set up Firebase listeners for real-time updates
      */
     private void setupFirebaseListeners() {
-        patientRef.addValueEventListener(new ValueEventListener() {
+        DatabaseReference sharedDataRef = FirebaseDatabase.getInstance().getReference("sharedPatientData").child(patientId);
+
+        sharedDataRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()) {
-                    // Retrieve patient data from the snapshot
-                    String firstName = dataSnapshot.child("firstName").getValue(String.class);
-                    String lastName = dataSnapshot.child("lastName").getValue(String.class);
-                    Long ageLong = dataSnapshot.child("age").getValue(Long.class);
-                    Integer age = ageLong != null ? ageLong.intValue() : null;
-                    String dob = dataSnapshot.child("dob").getValue(String.class);
-                    String phoneNumber = dataSnapshot.child("phoneNumber").getValue(String.class);
-                    String emergencyContact = dataSnapshot.child("emergencyContact").getValue(String.class);
-                    String gender = dataSnapshot.child("gender").getValue(String.class);
-                    String medicalCard = dataSnapshot.child("medicalCard").getValue(String.class);
-                    String lastVisitDate = dataSnapshot.child("lastVisitDate").getValue(String.class);
+                    Double heartRate = dataSnapshot.child("heartRate").getValue(Double.class);
+                    Double temperature = dataSnapshot.child("temperature").getValue(Double.class);
+                    Double accelerometerX = dataSnapshot.child("accelerometerX").getValue(Double.class);
+                    Double accelerometerY = dataSnapshot.child("accelerometerY").getValue(Double.class);
+                    Double accelerometerZ = dataSnapshot.child("accelerometerZ").getValue(Double.class);
 
-                    // Set patient details to the TextViews
-                    patientNameTextView.setText(firstName + " " + lastName);
-                    patientIDTextView.setText(patientId);
-                    ageTextView.setText("Age: " + (age != null ? age.toString() : "N/A"));
-                    dobTextView.setText("DOB: " + dob);
-                    phoneNumberTextView.setText("Phone: " + phoneNumber);
-                    emergencyContactTextView.setText("Emergency Contact: " + emergencyContact);
-                    genderTextView.setText("Gender: " + gender);
-                    medicalCardTextView.setText("Medical Card: " + medicalCard);
-                    lastVisitDateTextView.setText("Last Visit Date: " + lastVisitDate);
-
-                    // Set dummy values for indicators
-                    setHeartRateIndicator(75); // Dummy heart rate value
-                    setTemperatureIndicator(37.0f); // Dummy temperature value
-                    setAccelerometerIndicator(0.1f, 0.2f, 9.8f); // Dummy accelerometer values
-                } else {
-                    Toast.makeText(PatientInfoActivity.this, "Patient data not found", Toast.LENGTH_SHORT).show();
+                    if (heartRate != null) {
+                        setHeartRateIndicator(heartRate.intValue());
+                    }
+                    if (temperature != null) {
+                        setTemperatureIndicator(temperature.floatValue());
+                    }
+                    if (accelerometerX != null && accelerometerY != null && accelerometerZ != null) {
+                        setAccelerometerIndicator(accelerometerX.floatValue(), accelerometerY.floatValue(), accelerometerZ.floatValue());
+                    }
                 }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError databaseError) {
-                Toast.makeText(PatientInfoActivity.this, "Failed to load patient data", Toast.LENGTH_SHORT).show();
+                Toast.makeText(PatientInfoActivity.this, "Failed to load shared data", Toast.LENGTH_SHORT).show();
             }
         });
     }
+
+    private void sendNotification(String title, String message) {
+        pn.sendNotification(this, title, message);
+    }
 }
+//EOF

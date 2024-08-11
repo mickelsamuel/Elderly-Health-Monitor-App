@@ -163,7 +163,9 @@
                     android:id="@+id/editTextAge"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="number"/>
+                    android:inputType="none"
+                    android:focusable="false"
+                    android:clickable="false"/>
 
             </com.google.android.material.textfield.TextInputLayout>
 
