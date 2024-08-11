@@ -1,5 +1,6 @@
 package com.example.elderly_health_monitor_app;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -110,7 +111,7 @@ public class MonitorActivity extends AppCompatActivity {
     //00001101-0000-1000-8000-00805f9b34fb
     //FB6CF981-31CC-4F36-AF06-1F2F3E919840
     //UUID esp32UUID = UUID.fromString("4fafc201-1fb5-459e-8fcc-c5c9c331914b");//service UUID
-    public static Handler handler;
+
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothManager bluetoothManager;
     BluetoothGatt bluetoothGatt;
