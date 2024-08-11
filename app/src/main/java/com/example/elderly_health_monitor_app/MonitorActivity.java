@@ -5,6 +5,14 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
 import android.Manifest;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCallback;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattService;
+import android.bluetooth.BluetoothManager;
+import android.bluetooth.BluetoothProfile;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
@@ -16,6 +24,9 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.os.CountDownTimer;
 import android.os.Handler;
 import android.telephony.SmsManager;
@@ -35,9 +46,11 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.IgnoreExtraProperties;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MonitorActivity extends AppCompatActivity {
@@ -91,8 +104,88 @@ public class MonitorActivity extends AppCompatActivity {
     private String previousAccelerometerKey;
     private String previousHeartRateKey;
 
+    // Bluetooth Setup
+    private DatabaseReference databaseReference;
+    private UUIDReceiver uuidReceiver;
+    //00001101-0000-1000-8000-00805f9b34fb
+    //FB6CF981-31CC-4F36-AF06-1F2F3E919840
+    //UUID esp32UUID = UUID.fromString("4fafc201-1fb5-459e-8fcc-c5c9c331914b");//service UUID
+    public static Handler handler;
+    private BluetoothAdapter bluetoothAdapter;
+    private BluetoothManager bluetoothManager;
+    BluetoothGatt bluetoothGatt;
+    List<BluetoothGattService> bluetoothGattServiceList;
+    private BluetoothDataHandler bluetoothDataHandler;
+  
+    // Access Bluetooth on Device
+    private void requestBluetoothPermissions()
+    {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 1);}
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BLUETOOTH_SCAN}, 2);}
+    }
+  
+    // Detects Change of State for Bluetooth
+    private final BluetoothGattCallback bluetoothGattCallback = new BluetoothGattCallback()
+    {
+        @Override
+        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState)
+        {
+            System.out.println("onConnectionStateChange(BluetoothGatt gatt, int status, int newState): " + newState);
+
+            if (newState == BluetoothProfile.STATE_CONNECTED) {
+                System.out.println("BluetoothProfile.STATE_CONNECTED");
+                // successfully connected to the GATT Server
+                if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                    // TODO: Consider calling
+                    //    ActivityCompat#requestPermissions
+                    // here to request the missing permissions, and then overriding
+                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                    //                                          int[] grantResults)
+                    // to handle the case where the user grants the permission. See the documentation
+                    // for ActivityCompat#requestPermissions for more details.
+                    return;
+                }
+                bluetoothGatt.discoverServices();
+                //gatt.discoverServices();
+            }
+            else if (newState == BluetoothProfile.STATE_DISCONNECTED)
+            {
+                //gatt.disconnect();
+                // disconnected from the GATT Server
+            }
+        }
+        
+        @Override
+        public void onServicesDiscovered(BluetoothGatt gatt, int status)
+        {
+            System.out.println("onServicesDiscovered(BluetoothGatt gatt, int status) ");
+            bluetoothGattServiceList = gatt.getServices();
+            bluetoothDataHandler=new BluetoothDataHandler();
+            bluetoothDataHandler.start();
+            super.onServicesDiscovered(gatt, status);
+        }
+
+        @Override
+        public void onCharacteristicRead(@NonNull BluetoothGatt gatt, @NonNull BluetoothGattCharacteristic characteristic, @NonNull byte[] value, int status)
+        {
+            System.out.println("onCharacteristicRead value.toString: "+value.toString());
+            System.out.println("onCharacteristicRead characteristic.toString: "+characteristic.getValue().toString());
+
+            super.onCharacteristicRead(gatt, characteristic, value, status);
+        }
+
+        @Override
+        public void onCharacteristicChanged(@NonNull BluetoothGatt gatt, @NonNull BluetoothGattCharacteristic characteristic, @NonNull byte[] value)
+        {
+            System.out.println("onCharacteristicChanged value.toString: "+value.toString());
+            super.onCharacteristicChanged(gatt, characteristic, value);
+        }
+    };
+
+
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState)
+    {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_monitor);
 
@@ -139,6 +232,24 @@ public class MonitorActivity extends AppCompatActivity {
         // Set up Firebase listeners for real-time updates
         setupFirebaseListeners();
 
+        uuidReceiver = new UUIDReceiver();
+        IntentFilter intentFilter = new IntentFilter(BluetoothDevice.ACTION_UUID);
+        registerReceiver(uuidReceiver, intentFilter);
+        requestBluetoothPermissions();
+        initializeBluetooth();
+        databaseReference= FirebaseDatabase.getInstance().getReference();
+
+        Button button = ((Button) (findViewById(R.id.connectButton)));
+        button.setText(String.valueOf("Connect to bluetooth / Synchronize connection"));
+        button.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                connectBluetooth();
+            }
+        });
+      
         // Initialize patient object
         patient = new Patient();
 
@@ -732,6 +843,208 @@ public class MonitorActivity extends AppCompatActivity {
         }
     }
 
+    private void initializeBluetooth()
+    {
+        bluetoothManager = getSystemService(BluetoothManager.class);
+        bluetoothAdapter = bluetoothManager.getAdapter();
+
+        handler = new Handler(Looper.getMainLooper()) {
+            @Override
+            public void handleMessage(Message message) {
+                switch (message.what) {
+                    case 0:
+                        /*String esp32Message=message.obj.toString();
+                        System.out.println(esp32Message);*/
+                        break;
+                    case 4:
+                        String esp32Messag = message.obj.toString();
+                        System.out.println(esp32Messag);
+                        break;
+                    case 5:
+                        byte readBuff[] = (byte[]) message.obj;
+                        String esp32Message = new String(readBuff, 0, message.arg1);
+                        System.out.println(esp32Message);
+                        break;
+                }
+            }
+        };
+    }
+
+    //connect bluetooth
+    private void connectBluetooth()
+    {
+        final BluetoothDevice finalBluetoothDevice = bluetoothAdapter.getRemoteDevice("78:21:84:F8:A1:FE");
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED)
+        {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        bluetoothGatt = finalBluetoothDevice.connectGatt(getApplicationContext(), false, bluetoothGattCallback);
+        //finalBluetoothDevice.connectGatt(this, true, bluetoothGattCallback);
+    }
+
+    private class BluetoothDataHandler extends Thread
+    {
+        private long savedTimeMillis[]={0,0};
+        private long bluetoothReadFrequency=1000;
+        private long databaseWriteFrequency=5000;
+        private boolean isRunning;
+        private String bluetoothDataString;
+        private boolean databaseWritingEnabled;
+        private SensorsData sensorsData;
+
+
+        BluetoothDataHandler()
+        {
+            databaseWritingEnabled=true;
+            isRunning=false;
+        }
+
+        @Override
+        public synchronized void start()
+        {
+            isRunning=true;
+            super.start();
+        }
+
+        @Override
+        public void run()
+        {
+            while(isRunning==true)
+            {
+                if((savedTimeMillis[0]+bluetoothReadFrequency)<System.currentTimeMillis())
+                {
+                    readBluetoothCharacteristicData();
+                    if(bluetoothDataString!=null)
+                    {
+                        if(bluetoothDataString.isEmpty()==false)
+                        {
+                            if(databaseWritingEnabled==true && (savedTimeMillis[1]+databaseWriteFrequency)<System.currentTimeMillis())
+                            {
+                                writeToDatabase();
+                                savedTimeMillis[1]=System.currentTimeMillis();
+                            }
+                            savedTimeMillis[0]=System.currentTimeMillis();
+                        }
+                    }
+                }
+            }
+            super.run();
+        }
+
+        public void stopThread() {isRunning=false;}
+
+        public void setBluetoothReadFrequency(long duration) {bluetoothReadFrequency=duration;}
+
+        public boolean isDatabaseWritingEnabled(){return databaseWritingEnabled;}
+        public void toggleDatabaseWritingPermission()
+        {
+            if(databaseWritingEnabled==true) {databaseWritingEnabled=false;}
+            else{databaseWritingEnabled=true;}
+        }
+
+        private void readBluetoothCharacteristicData()
+        {
+            if (bluetoothGattServiceList != null)
+            {
+                BluetoothGattService bluetoothGattService = bluetoothGattServiceList.get(2);
+                List<BluetoothGattCharacteristic> bluetoothGattCharacteristicsList = bluetoothGattService.getCharacteristics();
+                //BluetoothGattCharacteristic bluetoothGattCharacteristic=bluetoothGattService.getCharacteristic(UUID.fromString("fb6cf981-31cc-4f36-af06-1f2f3e919840"));
+                BluetoothGattCharacteristic bluetoothGattCharacteristic = bluetoothGattCharacteristicsList.get(0);
+                if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                    // TODO: Consider calling
+                    //    ActivityCompat#requestPermissions
+                    // here to request the missing permissions, and then overriding
+                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                    //                                          int[] grantResults)
+                    // to handle the case where the user grants the permission. See the documentation
+                    // for ActivityCompat#requestPermissions for more details.
+                    return;
+                }
+                bluetoothGatt.readCharacteristic(bluetoothGattCharacteristic);
+                byte byteBuffer[]=bluetoothGattCharacteristic.getValue();
+                System.out.println("byteBuffer: "+byteBuffer);
+                try
+                {
+                    bluetoothDataString=new String(byteBuffer);
+                    System.out.println(bluetoothDataString);
+                    runOnUiThread(new Runnable()
+                    {
+                        @Override
+                        public void run()
+                        {
+                            //bluetoothReadingsTextView.setText(bluetoothDataString);
+                        }
+                    });
+                }catch (Exception e){}
+            }
+            else{System.out.println("bluetoothGattServiceList: null");}
+        }
+
+        private void writeToDatabase()
+        {
+            String dataString[]={String.valueOf(System.currentTimeMillis()),bluetoothDataString.substring(0,bluetoothDataString.indexOf(';')),"0","0","0","0","0"};
+            bluetoothDataString=bluetoothDataString.substring(bluetoothDataString.indexOf(';')+1);
+            dataString[2]=bluetoothDataString.substring(0,bluetoothDataString.indexOf(';'));
+            bluetoothDataString=bluetoothDataString.substring(bluetoothDataString.indexOf(';')+1);
+            dataString[3]=bluetoothDataString.substring(0,bluetoothDataString.indexOf(';'));
+            bluetoothDataString=bluetoothDataString.substring(bluetoothDataString.indexOf(';')+1);
+            dataString[4]=bluetoothDataString.substring(0,bluetoothDataString.indexOf(';'));
+            bluetoothDataString=bluetoothDataString.substring(bluetoothDataString.indexOf(';')+1);
+            dataString[5]=bluetoothDataString.substring(0,bluetoothDataString.indexOf(';'));
+            sensorsData=new SensorsData(dataString[0],dataString[1],dataString[2],dataString[3],dataString[4],dataString[5]);
+
+            runOnUiThread(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    temperatureReading.setText(dataString[1]);
+                    accelerometerXReading.setText(dataString[2]);
+                    accelerometerYReading.setText(dataString[3]);
+                    accelerometerZReading.setText(dataString[4]);
+                    heartRateReading.setText(dataString[5]);
+                }
+            });
+
+
+            //databaseReference.child("user").child(firebaseAuth.getCurrentUser().getUid()).setValue(user);
+            System.out.println("writeToDatabase");
+            databaseReference.child("sensorsTest").child("test1").setValue(sensorsData);
+        }
+    }
+
+    @IgnoreExtraProperties
+    public class SensorsData
+    {
+        public String timestamp;
+        public String temperature;
+        public String accelerationX;
+        public String accelerationY;
+        public String accelerationZ;
+        public String heartbeat;
+
+        public SensorsData() {
+            // Default constructor required for calls to DataSnapshot.getValue(User.class)
+        }
+
+        public SensorsData(String timestamp,String temperature, String accelerationX, String accelerationY, String accelerationZ,String heartbeat)
+        {
+            this.timestamp=timestamp;
+            this.temperature = temperature;
+            this.accelerationX=accelerationX;
+            this.accelerationY=accelerationY;
+            this.accelerationZ=accelerationZ;
+            this.heartbeat = heartbeat;
+        }
+    }
+
     // Handling the result of the permission request
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
@@ -870,4 +1183,3 @@ public class MonitorActivity extends AppCompatActivity {
     }
 
 }
-//EOF
