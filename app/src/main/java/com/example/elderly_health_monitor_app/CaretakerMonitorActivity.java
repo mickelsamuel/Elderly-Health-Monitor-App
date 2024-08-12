@@ -62,6 +62,8 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
     private String caretakerPhoneNumber;
     private String caretakerName;
 
+    private HealthMonitorAlerts healthMonitorAlerts;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -90,6 +92,8 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
 
         // Initialize Firebase database reference
         databaseRef = FirebaseDatabase.getInstance().getReference("users");
+
+        healthMonitorAlerts = new HealthMonitorAlerts(this, this);
 
         createNotificationChannel();
 
@@ -585,7 +589,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         });
     }
 
-    private void showNotification(String title, String message, String patientID, String patientName) {
+    public void showNotification(String title, String message, String patientID, String patientName) {
         Intent intent = new Intent(this, CaretakerMonitorActivity.class);
         intent.putExtra("alertTitle", title);
         intent.putExtra("alertMessage", message);
@@ -633,7 +637,7 @@ public class CaretakerMonitorActivity extends AppCompatActivity {
         }
     }
 
-    private void showNotificationDialog(String title, String message, String patientID, String patientName) {
+    public void showNotificationDialog(String title, String message, String patientID, String patientName) {
         AlertDialog.Builder builder = new AlertDialog.Builder(CaretakerMonitorActivity.this);
         builder.setTitle(title)
                 .setMessage(message + "\n\nPatient: " + patientName + " (ID: " + patientID + ")")
