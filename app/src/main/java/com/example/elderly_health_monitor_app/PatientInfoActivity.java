@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.IntentFilter;
 import static com.example.elderly_health_monitor_app.LoginActivity.pn;
+import static com.google.firebase.messaging.Constants.MessageNotificationKeys.TAG;
 
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -188,17 +189,28 @@ public class PatientInfoActivity extends AppCompatActivity {
      * Set up Firebase listeners for real-time updates
      */
     private void setupFirebaseListeners() {
+        Log.d(TAG, "Setting up Firebase listeners for patient ID: " + patientId);
+
         DatabaseReference sharedDataRef = FirebaseDatabase.getInstance().getReference("sharedPatientData").child(patientId);
 
         sharedDataRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                Log.d(TAG, "onDataChange triggered for PatientInfoActivity with patient ID: " + patientId);
+
                 if (dataSnapshot.exists()) {
                     Double heartRate = dataSnapshot.child("heartRate").getValue(Double.class);
                     Double temperature = dataSnapshot.child("temperature").getValue(Double.class);
                     Double accelerometerX = dataSnapshot.child("accelerometerX").getValue(Double.class);
                     Double accelerometerY = dataSnapshot.child("accelerometerY").getValue(Double.class);
                     Double accelerometerZ = dataSnapshot.child("accelerometerZ").getValue(Double.class);
+
+                    // Log the data retrieved
+                    Log.d(TAG, "Retrieved Sensor Data: Temperature: " + temperature +
+                            ", Heart Rate: " + heartRate +
+                            ", AccelerometerX: " + accelerometerX +
+                            ", AccelerometerY: " + accelerometerY +
+                            ", AccelerometerZ: " + accelerometerZ);
 
                     if (heartRate != null) {
                         setHeartRateIndicator(heartRate.intValue());
@@ -209,11 +221,14 @@ public class PatientInfoActivity extends AppCompatActivity {
                     if (accelerometerX != null && accelerometerY != null && accelerometerZ != null) {
                         setAccelerometerIndicator(accelerometerX.floatValue(), accelerometerY.floatValue(), accelerometerZ.floatValue());
                     }
+                } else {
+                    Log.d(TAG, "No data found for patient ID: " + patientId);
                 }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError databaseError) {
+                Log.e(TAG, "Failed to load shared data", databaseError.toException());
                 Toast.makeText(PatientInfoActivity.this, "Failed to load shared data", Toast.LENGTH_SHORT).show();
             }
         });

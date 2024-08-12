@@ -1122,26 +1122,23 @@ public class MonitorActivity extends AppCompatActivity {
         double roundedY = Math.round(patient.getAccelerometerY() * 100.0) / 100.0;
         double roundedZ = Math.round(patient.getAccelerometerZ() * 100.0) / 100.0;
 
-        // Delete previous temperature data if it exists
-        if (previousTemperatureKey != null) {
-            firebaseDatabase.getReference("temperatureValues").child(previousTemperatureKey).removeValue();
-        }
-        // Save new temperature data and keep track of its key
+        // Log the data being saved
+        Log.d(TAG, "Saving Sensor Data: Temperature: " + patient.getTemperature() +
+                ", Heart Rate: " + patient.getHeartRate() +
+                ", AccelerometerX: " + roundedX +
+                ", AccelerometerY: " + roundedY +
+                ", AccelerometerZ: " + roundedZ);
+
+        // Save new temperature data
         DatabaseReference temperatureRef = firebaseDatabase.getReference("temperatureValues").push();
-        previousTemperatureKey = temperatureRef.getKey();
         Map<String, Object> temperatureData = new HashMap<>();
         temperatureData.put("id", userId);
         temperatureData.put("temperatureTime", currentTime);
         temperatureData.put("temperatureVal", patient.getTemperature());
         temperatureRef.setValue(temperatureData);
 
-        // Delete previous accelerometer data if it exists
-        if (previousAccelerometerKey != null) {
-            firebaseDatabase.getReference("accelerometerValues").child(previousAccelerometerKey).removeValue();
-        }
-        // Save new accelerometer data and keep track of its key
+        // Save new accelerometer data
         DatabaseReference accelerometerRef = firebaseDatabase.getReference("accelerometerValues").push();
-        previousAccelerometerKey = accelerometerRef.getKey();
         Map<String, Object> accelerometerData = new HashMap<>();
         accelerometerData.put("id", userId);
         accelerometerData.put("accelerometerTime", currentTime);
@@ -1150,13 +1147,8 @@ public class MonitorActivity extends AppCompatActivity {
         accelerometerData.put("accelerometerZVal", roundedZ);
         accelerometerRef.setValue(accelerometerData);
 
-        // Delete previous heart rate data if it exists
-        if (previousHeartRateKey != null) {
-            firebaseDatabase.getReference("heartRateValues").child(previousHeartRateKey).removeValue();
-        }
-        // Save new heart rate data and keep track of its key
+        // Save new heart rate data
         DatabaseReference heartRateRef = firebaseDatabase.getReference("heartRateValues").push();
-        previousHeartRateKey = heartRateRef.getKey();
         Map<String, Object> heartRateData = new HashMap<>();
         heartRateData.put("id", userId);
         heartRateData.put("heartTime", currentTime);
@@ -1173,9 +1165,8 @@ public class MonitorActivity extends AppCompatActivity {
         sharedData.put("accelerometerZ", roundedZ);
         sharedDataRef.setValue(sharedData);
 
-        Log.d(TAG, "Sensor data saved and previous data deleted at " + currentTime);
+        Log.d(TAG, "Sensor data saved at " + currentTime);
     }
-
 
     @Override
     protected void onDestroy() {
